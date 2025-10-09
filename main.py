@@ -15,7 +15,7 @@ client = gspread.authorize(creds)
 sheet = client.open(config.SPREADSHEET_NAME).worksheet(config.WORKSHEET_NAME)
 
 # --- Telegram бот ---
-bot = telebot.TeleBot(config.8328512172:AAEaOGMTWKZeIUZytbHLvaAIz1kSdA0NaVQ)
+bot = telebot.TeleBot(8328512172:AAEaOGMTWKZeIUZytbHLvaAIz1kSdA0NaVQ)
 
 # Завантажуємо список магазинів
 with open("store_list.json", "r", encoding="utf-8") as f:
@@ -92,3 +92,4 @@ def get_phone(message):
 if __name__ == "__main__":
     print("🤖 Бот запущено...")
     bot.polling(none_stop=True)
+
