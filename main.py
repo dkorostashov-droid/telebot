@@ -206,3 +206,4 @@ if __name__ == "__main__":
     print("🤖 LC_WAIKIKI_UA_HR_bot запущено...")
     # none_stop=True — бот працює без зупинки
     bot.infinity_polling(skip_pending=True, timeout=30)
+
