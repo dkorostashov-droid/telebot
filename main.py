@@ -21,7 +21,7 @@ gclient = gspread.authorize(creds)
 worksheet = gclient.open(config.SPREADSHEET_NAME).worksheet(config.WORKSHEET_NAME)
 
 # ---------- Telegram Bot ----------
-bot = telebot.TeleBot(config.8328512172:AAEaOGMTWKZeIUZytbHLvaAIz1kSdA0NaVQ, parse_mode="HTML")
+bot = telebot.TeleBot(config.BOT_TOKEN, parse_mode="HTML")
 
 # ---------- Дані магазинів ----------
 with open("store_list.json", "r", encoding="utf-8") as f:
@@ -206,4 +206,5 @@ if __name__ == "__main__":
     print("🤖 LC_WAIKIKI_UA_HR_bot запущено...")
     # none_stop=True — бот працює без зупинки
     bot.infinity_polling(skip_pending=True, timeout=30)
+
 
