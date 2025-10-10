@@ -1,3 +1,13 @@
-pyTelegramBotAPI==4.16.1
-gspread==6.1.2
+# Telegram Bot Framework
+pyTelegramBotAPI==4.21.0
+
+# Web Framework (для webhook на Render)
+Flask==3.0.3
+
+# Для безпечної авторизації Google (якщо колись повернеш інтеграцію з Sheets)
 oauth2client==4.1.3
+gspread==6.1.2
+
+# Базові залежності Python
+requests==2.32.3
+gunicorn==22.0.0
