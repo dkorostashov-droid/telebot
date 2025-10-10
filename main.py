@@ -15,7 +15,7 @@ import flask
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 HR_CHAT_ID = int(os.getenv("HR_CHAT_ID", "-1003187426680"))
 
-WEBHOOK_URL = f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME', 'your-app-name.onrender.com')}/{8328512172:AAEaOGMTWKZeIUZytbHLvaAIz1kSdA0NaVQ}"
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 # ==================== INIT ====================
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -169,4 +169,5 @@ if __name__ == "__main__":
     bot.set_webhook(url=WEBHOOK_URL)
     print(f"✅ Webhook встановлено: {WEBHOOK_URL}")
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
 
