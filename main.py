@@ -1,5 +1,5 @@
 # LC_WAIKIKI_UA_HR_bot
-# Версія 3.3 — Render Webhook + JSON Store + Full UX
+# Версія 3.4 — Render Webhook FIX + JSON Store + Full UX
 # Автор: Denys K + ChatGPT
 
 import os
@@ -14,18 +14,17 @@ import flask
 # ==================== CONFIG ====================
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 HR_CHAT_ID = int(os.getenv("HR_CHAT_ID", "-1003187426680"))
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # має бути у Render Environment
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 if not BOT_TOKEN:
     raise ValueError("❌ BOT_TOKEN не знайдено! Додай його у Render Environment Variables.")
 
-# ==================== INIT ====================
 bot = telebot.TeleBot(BOT_TOKEN)
 app = flask.Flask(__name__)
 
 # ==================== LOAD STORES ====================
 def load_stores_from_json():
-    """Завантажує store_list.json і повертає dict: Місто -> [список рядків магазинів]"""
+    """Завантажує список магазинів із store_list.json"""
     try:
         with open("store_list.json", "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -36,14 +35,14 @@ def load_stores_from_json():
             addr = s.get("Адреса", "").strip()
             phone = s.get("Телефон", "").strip()
             if city and name:
-                display = f"{name} — {addr} ☎️ {phone}"
-                city_stores[city].append(display)
+                store_line = f"{name} — {addr} ☎️ {phone}"
+                city_stores[city].append(store_line)
         return dict(city_stores)
     except Exception as e:
         print("⚠️ Помилка при читанні store_list.json:", e)
         return {}
 
-# ==================== START / ЗГОДА ====================
+# ==================== START ====================
 @bot.message_handler(commands=["start"])
 def start(message):
     user_id = message.chat.id
@@ -77,11 +76,7 @@ def get_name(message):
     chat_id = message.chat.id
     bot.send_message(chat_id, f"Дякуємо, {name} 🙌")
     time.sleep(1)
-    bot.send_message(
-        chat_id,
-        "📞 *Крок 2 із 4*\n\nВведіть, будь ласка, ваш номер телефону:",
-        parse_mode="Markdown",
-    )
+    bot.send_message(chat_id, "📞 *Крок 2 із 4*\n\nВведіть ваш номер телефону:", parse_mode="Markdown")
     bot.register_next_step_handler(message, get_phone, name)
 
 def get_phone(message, name):
@@ -92,7 +87,7 @@ def get_phone(message, name):
     bot.send_message(chat_id, "🌆 *Крок 3 із 4*\n\nОберіть ваше місто:", parse_mode="Markdown")
     get_city(message, name, phone)
 
-# ==================== ВИБІР МІСТА / МАГАЗИНУ ====================
+# ==================== ВИБІР МІСТА ====================
 def get_city(message, name, phone):
     chat_id = message.chat.id
     city_stores = load_stores_from_json()
@@ -101,6 +96,7 @@ def get_city(message, name, phone):
         bot.send_message(chat_id, "⚠️ Не знайдено файл store_list.json або він порожній.")
         return
 
+    # сортуємо за кількістю магазинів (більше → вище)
     sorted_cities = sorted(city_stores.keys(), key=lambda c: len(city_stores[c]), reverse=True)
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
     for city in sorted_cities:
@@ -129,7 +125,7 @@ def get_store(message, name, phone, city_stores):
     )
     bot.register_next_step_handler(message, save_data, name, phone, city)
 
-# ==================== ЗБЕРЕЖЕННЯ / HR ====================
+# ==================== ЗБЕРЕЖЕННЯ ====================
 def save_data(message, name, phone, city):
     store = (message.text or "").strip()
     chat_id = message.chat.id
@@ -153,13 +149,15 @@ def save_data(message, name, phone, city):
     except Exception as e:
         print("⚠️ Не вдалося відправити в HR:", e)
 
-# ==================== FLASK ROUTES (WEBHOOK) ====================
-@app.route(f"/{os.getenv('BOT_TOKEN')}", methods=["POST"])
+# ==================== FLASK WEBHOOK ====================
+@app.route(f"/{BOT_TOKEN}", methods=["POST"])
 def webhook():
-    """Обробка запитів Telegram"""
+    """Приймає оновлення від Telegram"""
     try:
-        update = flask.request.stream.read().decode("utf-8")
-        bot.process_new_updates([telebot.types.Update.de_json(update)])
+        json_str = flask.request.get_data().decode("utf-8")
+        update = telebot.types.Update.de_json(json_str)
+        bot.process_new_updates([update])
+        print("✅ Update отримано від Telegram")
         return "OK", 200
     except Exception as e:
         print("⚠️ Webhook error:", e)
@@ -171,11 +169,9 @@ def index():
 
 # ==================== STARTUP ====================
 if __name__ == "__main__":
-    # Скидаємо старі повідомлення (щоб не накопичувались)
     bot.remove_webhook()
     time.sleep(2)
     bot.set_webhook(url=WEBHOOK_URL, drop_pending_updates=True)
     print(f"✅ Webhook встановлено: {WEBHOOK_URL}")
 
-    # Запуск Flask
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
