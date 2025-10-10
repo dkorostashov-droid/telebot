@@ -1,5 +1,5 @@
 # LC_WAIKIKI_UA_HR_bot
-# Версія: 3.1 (Render-ready Webhook + JSON store list)
+# Версія 3.3 — Render Webhook + JSON Store + Full UX
 # Автор: Denys K + ChatGPT
 
 import os
@@ -14,8 +14,10 @@ import flask
 # ==================== CONFIG ====================
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 HR_CHAT_ID = int(os.getenv("HR_CHAT_ID", "-1003187426680"))
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # має бути у Render Environment
 
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+if not BOT_TOKEN:
+    raise ValueError("❌ BOT_TOKEN не знайдено! Додай його у Render Environment Variables.")
 
 # ==================== INIT ====================
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -151,12 +153,17 @@ def save_data(message, name, phone, city):
     except Exception as e:
         print("⚠️ Не вдалося відправити в HR:", e)
 
-# ==================== FLASK ROUTES (Render Webhook) ====================
-@app.route("/" + BOT_TOKEN, methods=["POST"])
+# ==================== FLASK ROUTES (WEBHOOK) ====================
+@app.route(f"/{os.getenv('BOT_TOKEN')}", methods=["POST"])
 def webhook():
-    update = flask.request.stream.read().decode("utf-8")
-    bot.process_new_updates([telebot.types.Update.de_json(update)])
-    return "OK", 200
+    """Обробка запитів Telegram"""
+    try:
+        update = flask.request.stream.read().decode("utf-8")
+        bot.process_new_updates([telebot.types.Update.de_json(update)])
+        return "OK", 200
+    except Exception as e:
+        print("⚠️ Webhook error:", e)
+        return "Error", 500
 
 @app.route("/", methods=["GET"])
 def index():
@@ -164,10 +171,11 @@ def index():
 
 # ==================== STARTUP ====================
 if __name__ == "__main__":
+    # Скидаємо старі повідомлення (щоб не накопичувались)
     bot.remove_webhook()
-    time.sleep(1)
-    bot.set_webhook(url=WEBHOOK_URL)
+    time.sleep(2)
+    bot.set_webhook(url=WEBHOOK_URL, drop_pending_updates=True)
     print(f"✅ Webhook встановлено: {WEBHOOK_URL}")
+
+    # Запуск Flask
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
-
-
