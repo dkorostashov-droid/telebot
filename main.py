@@ -1,210 +1,164 @@
-# main.py
 # LC_WAIKIKI_UA_HR_bot
-# Бібліотеки: pyTelegramBotAPI, gspread, oauth2client
-# Зберігає заявки в Google Sheets та надсилає повідомлення в HR-канал
+# Версія: 2.0 (із покращеним UI і згодою на обробку даних)
+# Автор: Denys K + ChatGPT
 
-import json
-import re
-import datetime
+import os
+import time
 import telebot
 from telebot import types
-
+import datetime
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-import config  # BOT_TOKEN, SPREADSHEET_NAME, WORKSHEET_NAME, HR_CHAT_ID, GOOGLE_CREDENTIALS_FILE
+# ==================== CONFIG ====================
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+SPREADSHEET_NAME = os.getenv("SPREADSHEET_NAME", "LCWAIKIKI_candidates")
+WORKSHEET_NAME = os.getenv("WORKSHEET_NAME", "work")
+HR_CHAT_ID = int(os.getenv("HR_CHAT_ID", "-1003187426680"))
 
-# ---------- Google Sheets ----------
-GSCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_name(config.GOOGLE_CREDENTIALS_FILE, GSCOPE)
-gclient = gspread.authorize(creds)
-worksheet = gclient.open(config.SPREADSHEET_NAME).worksheet(config.WORKSHEET_NAME)
+# Google credentials JSON
+GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS", "")
+with open("credentials.json", "w", encoding="utf-8") as f:
+    f.write(GOOGLE_CREDENTIALS)
 
-# ---------- Telegram Bot ----------
-bot = telebot.TeleBot(config.BOT_TOKEN, parse_mode="HTML")
+# ==================== INIT ====================
+bot = telebot.TeleBot(BOT_TOKEN)
 
-# ---------- Дані магазинів ----------
-with open("store_list.json", "r", encoding="utf-8") as f:
-    STORES = json.load(f)
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+client = gspread.authorize(creds)
+sheet = client.open(SPREADSHEET_NAME).worksheet(WORKSHEET_NAME)
 
-CITIES = sorted(list({s["Місто"] for s in STORES}))
 
-def stores_by_city(city: str):
-    return [s for s in STORES if s["Місто"] == city]
+# ==================== СТАРТ / ЗГОДА ====================
+@bot.message_handler(commands=["start"])
+def start(message):
+    user_id = message.chat.id
+    markup = types.InlineKeyboardMarkup()
+    markup.add(types.InlineKeyboardButton("✅ Продовжити", callback_data="agree_data"))
 
-def find_store(city: str, mall: str):
-    for s in STORES:
-        if s["Місто"] == city and s["ТЦ"] == mall:
-            return s
-    return None
-
-# ---------- Стан користувачів ----------
-# chat_id -> dict(city, mall, name, phone)
-STATE = {}
-
-# ---------- Допоміжне ----------
-PHONE_RE = re.compile(r"^(?:\+?38)?0\d{9}$")  # приймає 0ХХХХХХХХХ або +380ХХХХХХХХХ
-
-def normalize_phone(p: str) -> str:
-    digits = re.sub(r"\D", "", p)
-    if digits.startswith("380") and len(digits) == 12:
-        return "+" + digits
-    if digits.startswith("0") and len(digits) == 10:
-        return "+38" + digits
-    return p.strip()
-
-def city_keyboard():
-    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    # по 2-3 міста в ряд, щоб не було занадто довгої клавіатури
-    row = []
-    for i, c in enumerate(CITIES, 1):
-        row.append(types.KeyboardButton(c))
-        if i % 3 == 0:
-            kb.row(*row); row = []
-    if row:
-        kb.row(*row)
-    return kb
-
-def mall_keyboard(city: str):
-    malls = [s["ТЦ"] for s in stores_by_city(city)]
-    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    row = []
-    for i, m in enumerate(malls, 1):
-        row.append(types.KeyboardButton(m))
-        if i % 2 == 0:
-            kb.row(*row); row = []
-    if row:
-        kb.row(*row)
-    kb.row("⬅️ Змінити місто")
-    return kb
-
-# ---------- Обробники ----------
-@bot.message_handler(commands=["start", "help"])
-def cmd_start(msg: types.Message):
-    STATE[msg.chat.id] = {}
     bot.send_message(
-        msg.chat.id,
-        "👋 Вітаємо в LC Waikiki Україна!\n\n"
-        "Щоб подати заявку, оберіть <b>місто</b>:",
-        reply_markup=city_keyboard()
+        user_id,
+        "👋 Вітаємо у *LC Waikiki Ukraine!*\n\n"
+        "Ми шукаємо енергійних і стильних людей, які хочуть розвиватися разом із міжнародним брендом 💙\n\n"
+        "🛡️ Вводячи свої дані, ви *погоджуєтесь на обробку персональних даних* "
+        "для цілей підбору персоналу компанії LC Waikiki.\n\n"
+        "Якщо ви згодні — натисніть **«Продовжити»** 👇",
+        parse_mode="Markdown",
+        reply_markup=markup,
     )
 
-@bot.message_handler(func=lambda m: m.text == "⬅️ Змінити місто")
-def change_city(msg: types.Message):
-    STATE[msg.chat.id] = {}
-    bot.send_message(msg.chat.id, "Будь ласка, оберіть місто:", reply_markup=city_keyboard())
 
-@bot.message_handler(func=lambda m: m.text in CITIES)
-def choose_city(msg: types.Message):
-    chat_id = msg.chat.id
-    STATE.setdefault(chat_id, {})
-    STATE[chat_id]["city"] = msg.text
+@bot.callback_query_handler(func=lambda call: call.data == "agree_data")
+def agree_data(call):
+    bot.answer_callback_query(call.id)
+    bot.send_message(call.message.chat.id, "📋 *Крок 1 із 4*\n\nБудь ласка, введіть ваше *ім’я та прізвище* 👇", parse_mode="Markdown")
+    bot.register_next_step_handler(call.message, get_name)
+
+
+# ==================== АНКЕТА ====================
+def get_name(message):
+    name = message.text.strip()
+    chat_id = message.chat.id
+    bot.send_message(chat_id, "Дякуємо, " + name + " 🙌")
+    time.sleep(1)
+    bot.send_message(chat_id, "📞 *Крок 2 із 4*\n\nВведіть, будь ласка, ваш номер телефону:", parse_mode="Markdown")
+    bot.register_next_step_handler(message, get_phone, name)
+
+
+def get_phone(message, name):
+    phone = message.text.strip()
+    chat_id = message.chat.id
+    bot.send_message(chat_id, "✅ Телефон збережено.")
+    time.sleep(1)
+    bot.send_message(chat_id, "🌆 *Крок 3 із 4*\n\nОберіть ваше місто:", parse_mode="Markdown")
+    get_city(message, name, phone)
+
+
+# ==================== ВИБІР МІСТА / МАГАЗИНУ ====================
+def get_city(message, name, phone):
+    chat_id = message.chat.id
+
+    city_stores = {
+        "Київ": [
+            "ТРЦ Ocean Plaza, вул. Антоновича, 176",
+            "ТРЦ Lavina Mall, вул. Берковецька, 6Д",
+            "ТРЦ River Mall, Дніпровська набережна, 12",
+            "ТРЦ Retroville, пр. Правди, 47",
+            "ТРЦ Cosmo Multimall, вул. Вадима Гетьмана, 6",  # 🆕 новий магазин
+        ],
+        "Львів": [
+            "ТРЦ Forum Lviv, вул. Під Дубом, 7Б",
+            "ТРЦ Victoria Gardens, вул. Кульпарківська, 226А",
+        ],
+        "Одеса": [
+            "ТРЦ Riviera, Южне шосе, 101",
+            "ТРЦ Gagarinn Plaza, вул. Гагарінське плато, 5А",
+        ],
+        "Харків": ["ТРЦ Nikolsky, вул. Пушкінська, 2"],
+        "Дніпро": ["ТРЦ Karavan, вул. Нижньодніпровська, 17"],
+        "Запоріжжя": ["ТРЦ City Mall, вул. Запорізька, 1Б"],
+        "Вінниця": ["ТРЦ Мегамолл, вул. 600-річчя, 17"],
+        "Полтава": ["ТРЦ Київ, вул. Зіньківська, 6/1"],
+        "Чернівці": ["ТРЦ DEPO’t Center, вул. Головна, 265А"],
+        "Івано-Франківськ": ["ТРЦ Велес, вул. Вовчинецька, 225А"],
+    }
+
+    sorted_cities = sorted(city_stores.keys(), key=lambda c: len(city_stores[c]), reverse=True)
+
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    for city in sorted_cities:
+        markup.add(types.KeyboardButton(city))
+
+    bot.send_message(chat_id, "🌇 Оберіть місто, де вам зручно працювати:", reply_markup=markup)
+    bot.register_next_step_handler(message, get_store, name, phone, city_stores)
+
+
+def get_store(message, name, phone, city_stores):
+    chat_id = message.chat.id
+    city = message.text.strip()
+
+    if city not in city_stores:
+        bot.send_message(chat_id, "Будь ласка, виберіть місто з клавіатури 👇")
+        return get_city(message, name, phone)
+
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    for store in city_stores[city]:
+        markup.add(types.KeyboardButton(store))
+
+    bot.send_message(chat_id, f"🏬 *Крок 4 із 4*\n\nОберіть магазин у місті {city}:", parse_mode="Markdown", reply_markup=markup)
+    bot.register_next_step_handler(message, save_data, name, phone, city)
+
+
+# ==================== ЗБЕРЕЖЕННЯ / ПОВІДОМЛЕННЯ ====================
+def save_data(message, name, phone, city):
+    store = message.text.strip()
+    chat_id = message.chat.id
+
+    now = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
+
+    # Запис у Google Sheets
+    sheet.append_row([now, name, phone, city, store, "Так"])  # "Так" = згода на обробку даних
+
+    # Повідомлення у HR-канал
     bot.send_message(
-        chat_id,
-        f"Місто: <b>{msg.text}</b>\nОберіть торговий центр (ТРЦ):",
-        reply_markup=mall_keyboard(msg.text)
+        HR_CHAT_ID,
+        f"📩 *Нова заявка від кандидата!*\n\n"
+        f"👤 Ім’я: {name}\n"
+        f"📞 Телефон: {phone}\n"
+        f"🏙️ Місто: {city}\n"
+        f"🏬 Магазин: {store}\n"
+        f"🕓 Час: {now}",
+        parse_mode="Markdown",
     )
 
-@bot.message_handler(func=lambda m: True)
-def router(msg: types.Message):
-    chat_id = msg.chat.id
-    st = STATE.get(chat_id)
-
-    # якщо місто ще не вибране
-    if not st or "city" not in st:
-        if msg.text in CITIES:
-            return choose_city(msg)
-        else:
-            return bot.send_message(chat_id, "Будь ласка, спочатку оберіть місто:", reply_markup=city_keyboard())
-
-    # якщо вибираємо ТЦ
-    if "mall" not in st:
-        if msg.text == "⬅️ Змінити місто":
-            return change_city(msg)
-        mall = msg.text
-        store = find_store(st["city"], mall)
-        if not store:
-            return bot.send_message(chat_id, "Будь ласка, оберіть ТРЦ зі списку на клавіатурі.")
-        st["mall"] = mall
-        st["store"] = store  # збережемо весь об'єкт (містить адресу/телефон)
-        bot.send_message(chat_id, "Введіть, будь ласка, <b>ПІБ</b> (прізвище та ім’я):", reply_markup=types.ReplyKeyboardRemove())
-        return
-
-    # якщо чекаємо ПІБ
-    if "name" not in st:
-        name = msg.text.strip()
-        if len(name) < 3:
-            return bot.send_message(chat_id, "Занадто коротке ім’я. Введіть, будь ласка, ПІБ ще раз:")
-        st["name"] = name
-        bot.send_message(chat_id, "Введіть, будь ласка, <b>номер телефону</b> у форматі 0XXXXXXXXX або +380XXXXXXXXX:")
-        return
-
-    # якщо чекаємо телефон
-    if "phone" not in st:
-        phone_raw = msg.text.strip()
-        phone_norm = normalize_phone(phone_raw)
-        if not PHONE_RE.match(re.sub(r"\D", "", phone_norm)):
-            return bot.send_message(chat_id, "Схоже, формат телефону некоректний. Приклад: <code>0XXXXXXXXX</code> або <code>+380XXXXXXXXX</code>\nСпробуйте ще раз:")
-        st["phone"] = phone_norm
-
-        # --- запис у Google Sheets ---
-        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        store = st["store"]
-        row = [
-            now,                       # Дата
-            st["city"],                # Місто
-            st["mall"],                # ТЦ
-            store.get("Адреса", ""),   # Адреса
-            store.get("Телефон", ""),  # Корпоративний тел.
-            st["name"],                # ПІБ
-            st["phone"],               # Телефон кандидата
-            str(msg.from_user.id),     # Telegram ID
-        ]
-        try:
-            worksheet.append_row(row)
-        except Exception as e:
-            bot.send_message(chat_id, f"⚠️ Сталася помилка під час збереження заявки: <code>{e}</code>\nСпробуйте, будь ласка, пізніше.")
-            STATE.pop(chat_id, None)
-            return
-
-        # --- підтвердження кандидату ---
-        bot.send_message(
-            chat_id,
-            "✅ <b>Дякуємо! Заявку збережено.</b>\n"
-            f"Локація: <b>{st['mall']}, {st['city']}</b>\n"
-            f"Адреса: {store.get('Адреса', '—')}\n"
-            "Ми зв’яжемося з вами найближчим часом."
-        )
-
-        # --- повідомлення HR каналу ---
-        try:
-            bot.send_message(
-                config.HR_CHAT_ID,
-                "🆕 <b>Нова заявка</b>\n"
-                f"👤 ПІБ: {st['name']}\n"
-                f"📞 Телефон: {st['phone']}\n"
-                f"🏙️ Місто: {st['city']}\n"
-                f"🏬 ТРЦ: {st['mall']}\n"
-                f"📍 Адреса ТРЦ: {store.get('Адреса', '—')}\n"
-                f"🧷 Telegram ID: <code>{msg.from_user.id}</code>"
-            )
-        except Exception:
-            # не зупиняємо бота, якщо канал недоступний
-            pass
-
-        # очистимо стан
-        STATE.pop(chat_id, None)
-        # запропонуємо нову заявку чи повернення в меню
-        bot.send_message(chat_id, "Якщо хочете подати ще одну заявку — натисніть /start")
-        return
-
-    # запасний випадок
-    bot.send_message(chat_id, "Щоб почати заново — натисніть /start")
+    # Відповідь користувачу
+    bot.send_message(chat_id, "💙 Дякуємо, що заповнили анкету LC Waikiki Ukraine!")
+    time.sleep(1)
+    bot.send_message(chat_id, "Наш HR-фахівець зв’яжеться з вами найближчим часом 🙌")
 
 
-if __name__ == "__main__":
-    print("🤖 LC_WAIKIKI_UA_HR_bot запущено...")
-    # none_stop=True — бот працює без зупинки
-    bot.infinity_polling(skip_pending=True, timeout=30)
-
+# ==================== START BOT ====================
+print("✅ Бот запущено та готовий до роботи...")
+bot.polling(none_stop=True)
 
