@@ -1,27 +1,29 @@
 # LC_WAIKIKI_UA_HR_bot
-# Версія: 3.0 (підтримка store_list.json + покращений UX)
+# Версія: 3.1 (Render-ready Webhook + JSON store list)
 # Автор: Denys K + ChatGPT
 
 import os
 import time
 import json
 import datetime
+from collections import defaultdict
 import telebot
 from telebot import types
-from collections import defaultdict
+import flask
 
 # ==================== CONFIG ====================
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 HR_CHAT_ID = int(os.getenv("HR_CHAT_ID", "-1003187426680"))
-SPREADSHEET_NAME = os.getenv("SPREADSHEET_NAME", "LCWAIKIKI_candidates")  # лише для назви
-WORKSHEET_NAME = os.getenv("WORKSHEET_NAME", "work")
 
-# ==================== ІНІЦІАЛІЗАЦІЯ ====================
+WEBHOOK_URL = f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME', 'your-app-name.onrender.com')}/{BOT_TOKEN}"
+
+# ==================== INIT ====================
 bot = telebot.TeleBot(BOT_TOKEN)
+app = flask.Flask(__name__)
 
-# ==================== ДОПОМІЖНІ ФУНКЦІЇ ====================
+# ==================== LOAD STORES ====================
 def load_stores_from_json():
-    """Завантажує файл store_list.json і повертає dict: Місто -> [список рядків магазинів]"""
+    """Завантажує store_list.json і повертає dict: Місто -> [список рядків магазинів]"""
     try:
         with open("store_list.json", "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -39,7 +41,7 @@ def load_stores_from_json():
         print("⚠️ Помилка при читанні store_list.json:", e)
         return {}
 
-# ==================== СТАРТ / ЗГОДА ====================
+# ==================== START / ЗГОДА ====================
 @bot.message_handler(commands=["start"])
 def start(message):
     user_id = message.chat.id
@@ -94,12 +96,10 @@ def get_city(message, name, phone):
     city_stores = load_stores_from_json()
 
     if not city_stores:
-        bot.send_message(chat_id, "⚠️ Не знайдено список магазинів. Перевірте файл store_list.json.")
+        bot.send_message(chat_id, "⚠️ Не знайдено файл store_list.json або він порожній.")
         return
 
-    # Сортування за кількістю магазинів
     sorted_cities = sorted(city_stores.keys(), key=lambda c: len(city_stores[c]), reverse=True)
-
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
     for city in sorted_cities:
         markup.add(types.KeyboardButton(city))
@@ -115,7 +115,7 @@ def get_store(message, name, phone, city_stores):
         bot.send_message(chat_id, "Будь ласка, виберіть місто з клавіатури 👇")
         return get_city(message, name, phone)
 
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     for store in city_stores[city]:
         markup.add(types.KeyboardButton(store))
 
@@ -127,7 +127,7 @@ def get_store(message, name, phone, city_stores):
     )
     bot.register_next_step_handler(message, save_data, name, phone, city)
 
-# ==================== ЗБЕРЕЖЕННЯ / ПОВІДОМЛЕННЯ ====================
+# ==================== ЗБЕРЕЖЕННЯ / HR ====================
 def save_data(message, name, phone, city):
     store = (message.text or "").strip()
     chat_id = message.chat.id
@@ -137,7 +137,6 @@ def save_data(message, name, phone, city):
     time.sleep(1)
     bot.send_message(chat_id, "Наш HR-фахівець зв’яжеться з вами найближчим часом 🙌")
 
-    # Повідомлення у HR-канал
     try:
         bot.send_message(
             HR_CHAT_ID,
@@ -150,9 +149,23 @@ def save_data(message, name, phone, city):
             parse_mode="Markdown",
         )
     except Exception as e:
-        print("⚠️ Не вдалося надіслати повідомлення HR:", e)
+        print("⚠️ Не вдалося відправити в HR:", e)
 
-# ==================== СТАРТ БОТА ====================
-print("✅ Бот запущено та готовий до роботи...")
-bot.polling(none_stop=True)
+# ==================== FLASK ROUTES (Render Webhook) ====================
+@app.route("/" + BOT_TOKEN, methods=["POST"])
+def webhook():
+    update = flask.request.stream.read().decode("utf-8")
+    bot.process_new_updates([telebot.types.Update.de_json(update)])
+    return "OK", 200
 
+@app.route("/", methods=["GET"])
+def index():
+    return "✅ LC Waikiki HR Bot працює (Webhook активний)"
+
+# ==================== STARTUP ====================
+if __name__ == "__main__":
+    bot.remove_webhook()
+    time.sleep(1)
+    bot.set_webhook(url=WEBHOOK_URL)
+    print(f"✅ Webhook встановлено: {WEBHOOK_URL}")
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
