@@ -16,9 +16,13 @@ bot = telebot.TeleBot(BOT_TOKEN)
 app = Flask(__name__)
 
 # ---------------- TEST HANDLER ----------------
-@bot.message_handler(commands=["start"])
-def start(message):
-    bot.reply_to(message, "✅ Бот працює! Все налаштовано правильно.")
+@bot.message_handler(commands=['start', 'help'])
+def handle_start_help(message):
+    print(f"💬 Отримано повідомлення від {message.chat.id}: {message.text}")
+    bot.send_message(
+        message.chat.id,
+        "✅ Бот працює! Дякую, що написали 🚀\n"
+        "Це стабільна версія на Render з правильним webhook."
 
 # ---------------- FLASK ROUTE ----------------
 @app.route("/webhook", methods=["GET", "POST"])
@@ -38,4 +42,5 @@ bot.remove_webhook()
 time.sleep(0.5)
 bot.set_webhook(url=WEBHOOK_URL)
 print(f"✅ Webhook встановлено: {WEBHOOK_URL}")
+
 
