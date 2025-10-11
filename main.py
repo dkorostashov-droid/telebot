@@ -2,12 +2,13 @@ import os
 import time
 import telebot
 from flask import Flask, request
+from threading import Thread
 
 # ---------------- CONFIG ----------------
 BOT_TOKEN = os.getenv("BOT_TOKEN", "8328512172:AAEaOGMTWKZeIUZytbHLvaAIz1kSdA0NaVQ")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL", "https://telebot-4snj.onrender.com/webhook")
 
-bot = telebot.TeleBot(BOT_TOKEN)
+bot = telebot.TeleBot(BOT_TOKEN, threaded=True)
 app = Flask(__name__)
 
 # ---------------- HANDLERS ----------------
@@ -38,6 +39,7 @@ def handle_all_messages(message):
 def index():
     return "✅ LC Waikiki HR Bot online and receiving Telegram updates", 200
 
+
 @app.route("/webhook", methods=["GET", "POST"])
 def webhook():
     if request.method == "GET":
@@ -48,14 +50,17 @@ def webhook():
         print("📦 Telegram update received:", raw_data)
 
         update = telebot.types.Update.de_json(raw_data)
-        bot.process_new_updates([update])
 
-        print("✅ Update передано TeleBot")
+        # передаємо update у окремий потік — гарантує обробку навіть при паралельних воркерах
+        Thread(target=lambda: bot.process_new_updates([update])).start()
+
+        print("✅ Update передано TeleBot (через Thread)")
         return "OK", 200
 
     except Exception as e:
         print("⚠️ Webhook processing error:", repr(e))
         return "Error", 500
+
 
 # ---------------- WEBHOOK SETUP ----------------
 bot.remove_webhook()
@@ -63,7 +68,7 @@ time.sleep(1)
 bot.set_webhook(url=WEBHOOK_URL)
 print(f"✅ Webhook встановлено: {WEBHOOK_URL}")
 
-# ---------------- LOCAL RUN (для відладки) ----------------
+# ---------------- LOCAL RUN (для Render/Gunicorn) ----------------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
