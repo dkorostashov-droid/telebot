@@ -1,193 +1,301 @@
 # main.py
-# LC Waikiki HR Bot — фінальна версія (production-ready)
-# Під Render (Gunicorn) + готовий store_list.json
+# LC Waikiki HR Bot — Deluxe Edition (UA only)
+# ✅ Render + Gunicorn, ✅ Webhook, ✅ Google Sheets, ✅ Всі магазини в коді, ✅ /addstore для адміна
 
 import os
+import re
 import json
-import csv
 import time
 import datetime
 from collections import defaultdict
+from typing import List, Dict
+
 from flask import Flask, request
 import telebot
 from telebot import types
 
-# -------------------- CONFIG --------------------
-
+# --------- CONFIG (env) ----------
 BOT_TOKEN = os.getenv("BOT_TOKEN", "8328512172:AAEaOGMTWKZeIUZytbHLvaAIz1kSdA0NaVQ")
 HR_CHAT_ID = int(os.getenv("HR_CHAT_ID", "-1003187426680"))
 ADMIN_IDS = [int(x) for x in os.getenv("ADMIN_IDS", "").split(",") if x.strip().isdigit()]
-STORE_FILE = "store_list.json"
-APPLICATIONS_CSV = "applications.csv"
+WEBHOOK_URL = os.getenv("WEBHOOK_URL", "https://telebot-4snj.onrender.com/webhook")
 
-# Render webhook autodetect
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")
-if not WEBHOOK_URL:
-    host = os.getenv("RENDER_EXTERNAL_HOSTNAME") or os.getenv("RENDER_EXTERNAL_URL")
-    if host:
-        host = host.rstrip("/")
-        WEBHOOK_URL = f"https://{host}/webhook" if "://" not in host else f"{host.rstrip('/')}/webhook"
-    else:
-        WEBHOOK_URL = "https://telebot-4snj.onrender.com/webhook"
+SPREADSHEET_NAME = os.getenv("SPREADSHEET_NAME", "LCWAIKIKI_candidates")
+WORKSHEET_NAME = os.getenv("WORKSHEET_NAME", "work")
+GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS", "").strip()
 
-# -------------------- UTILS --------------------
-
-def load_stores():
+# --------- Google Sheets client ----------
+gspread_client = None
+worksheet = None
+if GOOGLE_CREDENTIALS:
     try:
-        with open(STORE_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            if isinstance(data, list):
-                return data
-            else:
-                print("⚠️ store_list.json має некоректний формат (очікується список)")
-                return []
-    except FileNotFoundError:
-        print("⚠️ Файл store_list.json не знайдено!")
-        return []
+        import gspread
+        from oauth2client.service_account import ServiceAccountCredentials
+
+        creds_dict = json.loads(GOOGLE_CREDENTIALS)
+        scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+        gspread_client = gspread.authorize(creds)
+        sh = gspread_client.open(SPREADSHEET_NAME)
+        worksheet = sh.worksheet(WORKSHEET_NAME)
+        print("✅ Google Sheets підключено:", SPREADSHEET_NAME, "/", WORKSHEET_NAME)
     except Exception as e:
-        print("⚠️ Помилка читання store_list.json:", e)
+        print("⚠️ Не вдалося підключитись до Google Sheets:", repr(e))
+else:
+    print("⚠️ GOOGLE_CREDENTIALS не задано — запис у таблицю буде пропущено.")
+
+# --------- Вбудований список магазинів (повний) ----------
+# Джерело: твій масив + додано Київ, ТРЦ Cosmo Multimoll (вул. Вадима Гетьмана, 6)
+STORES: List[Dict[str, str]] = [
+  {"ТЦ": "Ocean Plaza", "Місто": "Київ", "Телефон": "(067) 829-46-29", "Адреса": "вул.Антоновича,176,03150"},
+  {"ТЦ": "Riviera", "Місто": "Одеса", "Телефон": "(067) 825-34-38", "Адреса": "село Фонтанка, Південна дорога,101А,65069"},
+  {"ТЦ": "Forum Lviv", "Місто": "Львів", "Телефон": "(067) 825-34-39", "Адреса": "вул.Під дубом, 7Б,79058"},
+  {"ТЦ": "Prospect", "Місто": "Київ", "Телефон": "(067) 825-34-36", "Адреса": "вул. Гната Хоткевича, 1-В,02000"},
+  {"ТЦ": "Holywood", "Місто": "Чернігів", "Телефон": "(067) 828-28-99", "Адреса": "вул.77-ї Гвардійської Дивізії, 1-В,14000"},
+  {"ТЦ": "City Mall", "Місто": "Запоріжжя", "Телефон": "(067) 827-38-70", "Адреса": "вул.Запорізька, 1Б,69002"},
+  {"ТЦ": "French Buelvard", "Місто": "Харків", "Телефон": "(067) 446 89 87", "Адреса": "вул.Ак.Павлова, 44-Б,61038"},
+  {"ТЦ": "Global", "Місто": "Житомир", "Телефон": "(067) 829-28-09", "Адреса": "вул.Київська,77,10001"},
+  {"ТЦ": "Sun Gallery", "Місто": "Кривий Ріг", "Телефон": "(067) 829-59-13", "Адреса": "майдан Олександра Химиченка, буд. 1,50000"},
+  {"ТЦ": "Victoria Gardens", "Місто": "Львів", "Телефон": "(067) 828-11-32", "Адреса": "вул.Кульпарківська, 226-А,79071"},
+  {"ТЦ": "Karavan", "Місто": "Дніпро", "Телефон": "(067) 446-89-83", "Адреса": "вул.Нижньодніпровська, 17-б,52005"},
+  {"ТЦ": "Most City", "Місто": "Дніпро", "Телефон": "(067) 826-16-74", "Адреса": "вул.Глинки, 2,49000"},
+  {"ТЦ": "Lavina", "Місто": "Київ", "Телефон": "(067) 824-03-57", "Адреса": "вул. Берковецька, 6Д,04128"},
+  {"ТЦ": "New Way", "Місто": "Київ", "Телефон": "(067) 446-89-81", "Адреса": "вул.Арх.Вербицького, 1,02068"},
+  {"ТЦ": "Sky Mall", "Місто": "Київ", "Телефон": "(067) 223-78-44", "Адреса": "пр-т Р. Шухевича, 2Т,02218"},
+  {"ТЦ": "Kiev Mall", "Місто": "Полтава", "Телефон": "(067) 446-89-80", "Адреса": "вул. Зіньківська, 6/1А,36000"},
+  {"ТЦ": "Karavan", "Місто": "Київ", "Телефон": "(067) 642-74-78", "Адреса": "вул.Лугова,12,02000"},
+  {"ТЦ": "King Cross", "Місто": "Львів", "Телефон": "(067) 642-74-79", "Адреса": "вул. Стрийська, 30, с.Сокільники,81130"},
+  {"ТЦ": "Fontan Sky Mall", "Місто": "Одеса", "Телефон": "(067) 543-19-44", "Адреса": "пров. Семафорний,4е,65012"},
+  {"ТЦ": "TSUM", "Місто": "Луцьк", "Телефон": "(067) 446-90-02", "Адреса": "пр. Волі, 1,43000"},
+  {"ТЦ": "Podolyany", "Місто": "Тернопіль", "Телефон": "(067) 829-47-90", "Адреса": "вул.Текстильна, 28-Ч ,46400"},
+  {"ТЦ": "Sky Park", "Місто": "Вінниця", "Телефон": "(067) 543-14-50", "Адреса": "вул. Миколи Оводова, 51,21000"},
+  {"ТЦ": "Zlata Plaza", "Місто": "Рівне", "Телефон": "(067) 543-89-21", "Адреса": "вул. Борисенка, 1,33000"},
+  {"ТЦ": "OAZIS", "Місто": "Хмельницький", "Телефон": "(067) 400-79-52", "Адреса": "вул.Степана Бандери 2А,29000"},
+  {"ТЦ": "Veles Mall", "Місто": "Івано-Франківськ", "Телефон": "(067) 700-50-92", "Адреса": "с. Вовчинець, вул. Вовчинецька, буд. 225, корп. „а” ,76006"},
+  {"ТЦ": "Promenada Park", "Місто": "Київ", "Телефон": "(067) 825-34-42", "Адреса": "вул. Велика Кільцева, буд. 4-Ф"},
+  {"ТЦ": "City Center", "Місто": "Одеса", "Телефон": "(067) 825-34-41", "Адреса": "пр.Небесної Сотні 2,65101"},
+  {"ТЦ": "River Mall", "Місто": "Київ", "Телефон": "(067) 245-05-98", "Адреса": "вул.Дніпровська Набережна 12,02000"},
+  {"ТЦ": "Blockbuster Mall", "Місто": "Київ", "Телефон": "(067) 658-63-42", "Адреса": "пр-т Степана Бандери 36"},
+  {"ТЦ": "CityCenter", "Місто": "Миколаїв", "Телефон": "(063) 457 14 58", "Адреса": "пр-т Центральний 98"},
+  {"ТЦ": "Retroville", "Місто": "Київ", "Телефон": "(067) 232-26-41", "Адреса": "Пр-т Європейського Союзу 47"},
+  {"ТЦ": "Nikolsky", "Місто": "Харків", "Телефон": "(067)6586312", "Адреса": "вул. Г. Сковороди 2-А"},
+  {"ТЦ": "Apollo", "Місто": "Дніпро", "Телефон": "(067) 658-64-10", "Адреса": "вул.Незалежності 32А"},
+  {"ТЦ": "ТРЦ Київ", "Місто": "Суми", "Телефон": "(067) 658-63-29", "Адреса": "вул.Кооперативна 1"},
+  {"ТЦ": "DEPOt Mall", "Місто": "Чернівці", "Телефон": "(067)232-10-58", "Адреса": "вул. Головна, буд. 265, корпус 1, літ. 'А'"},
+  {"ТЦ": "ТРЦ Мегамолл", "Місто": "Вінниця", "Телефон": "(067) 658-62-61", "Адреса": "вул. 600 річчя 17E"},
+  {"ТЦ": "City Center Kotovskii (Odesa)", "Місто": "Одеса", "Телефон": "(067) 232-26-83", "Адреса": "Одеса, Одеська область, вул. Давида Ойстраха, 32"},
+  {"ТЦ": "Любава", "Місто": "Черкаси", "Телефон": "(067) 232-44-16", "Адреса": "буль.Тараса Шевченка 208/1"},
+  {"ТЦ": "TSUM", "Місто": "Кам'янське", "Телефон": "(067) 232-44-50", "Адреса": "просп.Тараса Шевченка 9"},
+  {"ТЦ": "KHRESCHATYK", "Місто": "Київ", "Телефон": "(067) 232-26-95", "Адреса": "Хрещатик, 50"},
+  {"ТЦ": "ТРЦ Острів", "Місто": "Одеса", "Телефон": "(067) 232-47-75", "Адреса": "вул. Новощепний Ряд, 2"},
+  {"ТЦ": "ТРЦ Район", "Місто": "Київ", "Телефон": "(067) 245-06-01", "Адреса": "вул.Лаврухина, 4"},
+  {"ТЦ": "ТРЦ Республіка", "Місто": "Київ", "Телефон": "(067) 113-68-93", "Адреса": "вул.Кільцева дорога, 1"},
+  {"ТЦ": "ТРЦ Депот", "Місто": "Кропивницький", "Телефон": "(063) 457 16 30", "Адреса": "вул. Велика Перспективна, 48, 25000"},
+  {"ТЦ": "ТРЦ Майдан", "Місто": "Шептицький", "Телефон": "(063) 457 16 20", "Адреса": "вул. Героїв Майдану, 10, 80100"},
+  {"ТЦ": "ТРЦ Комод", "Місто": "Київ", "Телефон": "(063) 457 16 19", "Адреса": "вул.Митрополита Андрія Шептицького, 4-А, 02002"},
+  {"ТЦ": "ТРЦ Клас", "Місто": "Харків", "Телефон": "(063) 457 03 10", "Адреса": "вул. Дудинської, 1-А, 61064"},
+  # Доданий новий магазин Київ, ТРЦ Cosmo Multimoll, вул. Вадима Гетьмана, 6
+  {"ТЦ": "Cosmo Multimoll", "Місто": "Київ", "Телефон": "", "Адреса": "вул. Вадима Гетьмана, 6"},
+]
+
+# Додаткові (динамічні) магазини, що додаються адміном через /addstore — збережемо в окремому файлі:
+DYNAMIC_FILE = "stores_dynamic.json"
+
+def load_dynamic_stores() -> List[Dict[str, str]]:
+    try:
+        if not os.path.exists(DYNAMIC_FILE):
+            return []
+        with open(DYNAMIC_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data if isinstance(data, list) else []
+    except Exception as e:
+        print("⚠️ Помилка читання stores_dynamic.json:", e)
         return []
 
-def add_store_to_file(store_obj):
+def save_dynamic_store(city: str, mall: str, phone: str, addr: str) -> bool:
+    data = load_dynamic_stores()
+    data.append({"ТЦ": mall, "Місто": city, "Телефон": phone, "Адреса": addr})
     try:
-        stores = load_stores()
-        stores.append(store_obj)
-        with open(STORE_FILE, "w", encoding="utf-8") as f:
-            json.dump(stores, f, ensure_ascii=False, indent=2)
-        print("✅ Новий магазин додано до store_list.json")
+        with open(DYNAMIC_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        print("✅ Додано динамічний магазин:", city, mall)
         return True
     except Exception as e:
-        print("⚠️ Не вдалося додати магазин:", e)
+        print("⚠️ Не вдалося зберегти динамічний магазин:", e)
         return False
 
-def city_to_display(store):
-    name = store.get("ТЦ", "").strip()
-    addr = store.get("Адреса", "").strip()
-    phone = store.get("Телефон", "").strip()
-    return f"{name} — {addr} ☎️ {phone}"
+def all_stores() -> List[Dict[str, str]]:
+    # злиємо вшиті + динамічні
+    return STORES + load_dynamic_stores()
 
-def group_stores_by_city():
-    stores = load_stores()
+# --- Формування структури міст/магазинів ---
+def store_label(s: Dict[str, str]) -> str:
+    name = s.get("ТЦ", "").strip()
+    addr = s.get("Адреса", "").strip()
+    phone = s.get("Телефон", "").strip()
+    suffix = f" ☎️ {phone}" if phone else ""
+    return f"{name} — {addr}{suffix}"
+
+def group_by_city() -> Dict[str, List[str]]:
     city_map = defaultdict(list)
+    stores = all_stores()
+    print(f"📦 Завантажено магазинів (разом): {len(stores)}")
     for s in stores:
-        city = s.get("Місто", "").strip() or "Інше"
-        city_map[city].append(city_to_display(s))
+        city = (s.get("Місто") or "").strip() or "Інше"
+        city_map[city].append(store_label(s))
     return city_map
 
-def save_application_csv(name, phone, city, store):
-    headers = ["timestamp", "name", "phone", "city", "store"]
-    row = [datetime.datetime.now().isoformat(), name, phone, city, store]
-    exists = os.path.exists(APPLICATIONS_CSV)
-    try:
-        with open(APPLICATIONS_CSV, "a", newline="", encoding="utf-8") as f:
-            writer = csv.writer(f)
-            if not exists:
-                writer.writerow(headers)
-            writer.writerow(row)
-        print("✅ Application saved to", APPLICATIONS_CSV)
-    except Exception as e:
-        print("⚠️ Could not save application to CSV:", e)
-
-# -------------------- INIT --------------------
-
+# ---------- Flask & TeleBot ----------
 app = Flask(__name__)
-bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
+bot = telebot.TeleBot(BOT_TOKEN, threaded=False)  # sync обробка — стабільно під Gunicorn
 
-# -------------------- BOT LOGIC --------------------
+# ---------- Валідація телефону (мʼяка) ----------
+PHONE_RE = re.compile(r"^\+?[\d\s\-\(\)]{9,20}$")
 
+def valid_phone(p: str) -> bool:
+    return bool(PHONE_RE.match(p.strip()))
+
+# ---------- State flow ----------
 @bot.message_handler(commands=["start"])
-def cmd_start(message):
-    markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton("✅ Погоджуюсь", callback_data="consent_ok"))
+def start(message):
+    # Вітання + підтвердження ПД
     text = (
-        "👋 Вітаємо! Щоб продовжити і передати свої контактні дані для HR, "
-        "потрібно погодитись на обробку персональних даних.\n\n"
-        "Натисніть кнопку нижче, щоб погодитися і продовжити."
+        "👋 Вітаємо в *LC Waikiki HR Bot*!\n\n"
+        "Щоб продовжити та надіслати свої контактні дані для HR, "
+        "потрібно погодитись на обробку персональних даних."
     )
-    bot.send_message(message.chat.id, text, reply_markup=markup)
+    kb = types.InlineKeyboardMarkup()
+    kb.add(types.InlineKeyboardButton("✅ Погоджуюсь", callback_data="consent_ok"))
+    bot.send_message(message.chat.id, text, parse_mode="Markdown", reply_markup=kb)
 
-@bot.callback_query_handler(func=lambda call: call.data == "consent_ok")
-def on_consent(call):
+@bot.callback_query_handler(func=lambda c: c.data == "consent_ok")
+def consent_ok(call):
     bot.answer_callback_query(call.id)
-    msg = bot.send_message(call.message.chat.id, "📋 *Крок 1/3*\nВведіть, будь ласка, ваше Ім'я та Прізвище:", parse_mode="Markdown")
-    bot.register_next_step_handler(msg, ask_phone)
+    msg = bot.send_message(call.message.chat.id, "📋 *Крок 1/5*\nВведіть, будь ласка, ваше *Ім'я та Прізвище*:", parse_mode="Markdown")
+    bot.register_next_step_handler(msg, step_name)
 
-def ask_phone(message):
-    name = message.text.strip()
-    msg = bot.send_message(message.chat.id, "📞 *Крок 2/3*\nВведіть ваш номер телефону:", parse_mode="Markdown")
-    bot.register_next_step_handler(msg, ask_city, name)
+def step_name(message):
+    name = (message.text or "").strip()
+    if not name or len(name) < 3:
+        msg = bot.send_message(message.chat.id, "🙈 Імʼя вказано некоректно. Будь ласка, введіть *Ім'я та Прізвище* ще раз:", parse_mode="Markdown")
+        return bot.register_next_step_handler(msg, step_name)
 
-def ask_city(message, name):
-    phone = message.text.strip()
-    city_map = group_stores_by_city()
+    msg = bot.send_message(message.chat.id, "📞 *Крок 2/5*\nВведіть ваш *номер телефону* (наприклад, `+380XXXXXXXXX`):", parse_mode="Markdown")
+    bot.register_next_step_handler(msg, step_phone, name)
+
+def step_phone(message, name):
+    phone = (message.text or "").strip()
+    if not valid_phone(phone):
+        msg = bot.send_message(message.chat.id, "📵 Номер виглядає некоректним. Введіть, будь ласка, *номер телефону* ще раз:", parse_mode="Markdown")
+        return bot.register_next_step_handler(msg, step_phone, name)
+
+    # Підтягуємо/групуємо магазини
+    city_map = group_by_city()
     if not city_map:
-        bot.send_message(message.chat.id, "⚠️ На жаль, список магазинів порожній. Спробуйте пізніше.")
+        bot.send_message(message.chat.id, "⚠️ Наразі перелік магазинів порожній. Спробуйте пізніше.")
         return
 
-    sorted_cities = sorted(city_map.keys(), key=lambda c: len(city_map[c]), reverse=True)
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
-    for c in sorted_cities:
-        markup.add(types.KeyboardButton(c))
-    msg = bot.send_message(message.chat.id, "🌆 *Крок 3/3*\nОберіть ваше місто:", parse_mode="Markdown", reply_markup=markup)
-    bot.register_next_step_handler(msg, ask_store, name, phone, city_map)
+    # Міста за кількістю магазинів (спадаюче)
+    cities_sorted = sorted(city_map.keys(), key=lambda c: len(city_map[c]), reverse=True)
 
-def ask_store(message, name, phone, city_map):
-    city = message.text.strip()
+    kb = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+    for c in cities_sorted:
+        kb.add(types.KeyboardButton(c))
+
+    msg = bot.send_message(message.chat.id, "🌆 *Крок 3/5*\nОберіть ваше *місто*:", parse_mode="Markdown", reply_markup=kb)
+    bot.register_next_step_handler(msg, step_city, name, phone, city_map)
+
+def step_city(message, name, phone, city_map):
+    city = (message.text or "").strip()
     if city not in city_map:
-        bot.send_message(message.chat.id, "Будь ласка, оберіть місто з клавіатури.")
-        return ask_city(message, name)
-    stores = city_map[city]
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    for s in stores:
-        label = s if len(s) <= 60 else s[:57] + "..."
-        markup.add(types.KeyboardButton(label))
-    msg = bot.send_message(message.chat.id, f"🏬 Оберіть магазин у місті {city}:", reply_markup=markup)
-    bot.register_next_step_handler(msg, finalize_application, name, phone, city)
+        msg = bot.send_message(message.chat.id, "😬 Будь ласка, оберіть *місто* зі списку нижче:", parse_mode="Markdown")
+        return bot.register_next_step_handler(msg, step_city, name, phone, city_map)
 
-def finalize_application(message, name, phone, city):
-    store = message.text.strip()
-    now = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
+    # Список магазинів у місті
+    stores = city_map[city]
+    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    for s in stores:
+        label = s if len(s) <= 60 else s[:57] + "…"
+        kb.add(types.KeyboardButton(label))
+
+    msg = bot.send_message(message.chat.id, f"🏬 *Крок 4/5*\nОберіть *магазин* у місті _{city}_:", parse_mode="Markdown", reply_markup=kb)
+    bot.register_next_step_handler(msg, step_store, name, phone, city)
+
+def step_store(message, name, phone, city):
+    store = (message.text or "").strip()
+    if not store:
+        msg = bot.send_message(message.chat.id, "Будь ласка, оберіть магазин зі списку нижче.")
+        return bot.register_next_step_handler(msg, step_store, name, phone, city)
+
+    # Підтвердження → відправка HR → Google Sheets
+    ts = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
+    confirm = (
+        "✅ *Крок 5/5*\nДякуємо! Ваша заявка прийнята 💙\n\n"
+        "Наша HR-команда звʼяжеться з вами найближчим часом."
+    )
+    bot.send_message(message.chat.id, confirm, parse_mode="Markdown", reply_markup=types.ReplyKeyboardRemove())
+
+    # HR повідомлення
     hr_text = (
-        f"📩 *Нова заявка від кандидата*\n\n"
-        f"👤 Ім'я: {name}\n"
+        "📩 *Нова заявка від кандидата*\n\n"
+        f"👤 Імʼя: {name}\n"
         f"📞 Телефон: {phone}\n"
         f"🏙️ Місто: {city}\n"
         f"🏬 Магазин: {store}\n"
-        f"🕓 Час: {now}"
+        f"🕓 Час: {ts}\n"
+        f"🆔 User: @{message.from_user.username or '—'} / {message.from_user.id}"
     )
-    bot.send_message(message.chat.id, "💙 Дякуємо! Наша HR-команда зв'яжеться з вами найближчим часом.")
-    bot.send_message(HR_CHAT_ID, hr_text, parse_mode="Markdown")
-    save_application_csv(name, phone, city, store)
+    try:
+        bot.send_message(HR_CHAT_ID, hr_text, parse_mode="Markdown")
+    except Exception as e:
+        print("⚠️ Не надіслано в HR чат:", repr(e))
 
-# -------------------- ADMIN /addstore --------------------
+    # Google Sheets
+    try:
+        if worksheet:
+            worksheet.append_row([
+                datetime.datetime.now().isoformat(),
+                name,
+                phone,
+                city,
+                store,
+                str(message.from_user.id),
+                f"@{message.from_user.username or ''}"
+            ], value_input_option="USER_ENTERED")
+            print("✅ Запис у Google Sheets виконано")
+        else:
+            print("ℹ️ Google Sheets клієнт не ініціалізовано — пропускаємо запис.")
+    except Exception as e:
+        print("⚠️ Помилка запису в Google Sheets:", repr(e))
 
+# ---------- Адмін: /addstore ----------
 @bot.message_handler(commands=["addstore"])
-def cmd_addstore(message):
-    user_id = message.from_user.id
-    if ADMIN_IDS and user_id not in ADMIN_IDS:
-        bot.send_message(message.chat.id, "❌ У вас немає прав для додавання магазинів.")
-        return
+def addstore(message):
+    uid = message.from_user.id
+    if ADMIN_IDS and uid not in ADMIN_IDS:
+        return bot.send_message(message.chat.id, "❌ У вас немає прав для цієї дії.")
     msg = bot.send_message(
         message.chat.id,
-        "Введіть дані нового магазину у форматі:\nМісто|ТЦ|Телефон|Адреса\n\n"
-        "Приклад:\nКиїв|Cosmo Multimoll|(067) 123-45-67|вул. Вадима Гетьмана, 6"
+        "Введіть дані магазину у форматі:\n"
+        "`Місто|ТЦ|Телефон|Адреса`\n\n"
+        "Напр.: `Київ|Cosmo Multimoll|(067) 111-22-33|вул. Вадима Гетьмана, 6`",
+        parse_mode="Markdown"
     )
-    bot.register_next_step_handler(msg, process_addstore)
+    bot.register_next_step_handler(msg, addstore_process)
 
-def process_addstore(message):
-    parts = [p.strip() for p in message.text.strip().split("|")]
+def addstore_process(message):
+    text = (message.text or "")
+    parts = [p.strip() for p in text.split("|")]
     if len(parts) != 4:
-        bot.send_message(message.chat.id, "Невірний формат. Спробуйте ще раз.")
-        return
+        return bot.send_message(message.chat.id, "Невірний формат. Спробуйте ще раз: `Місто|ТЦ|Телефон|Адреса`", parse_mode="Markdown")
     city, mall, phone, addr = parts
-    store_obj = {"ТЦ": mall, "Місто": city, "Телефон": phone, "Адреса": addr}
-    if add_store_to_file(store_obj):
-        bot.send_message(message.chat.id, "✅ Магазин додано.")
+    ok = save_dynamic_store(city, mall, phone, addr)
+    if ok:
+        bot.send_message(message.chat.id, "✅ Магазин додано. Новий список підхопиться автоматично.")
     else:
-        bot.send_message(message.chat.id, "⚠️ Сталася помилка при додаванні магазину.")
+        bot.send_message(message.chat.id, "⚠️ Не вдалося додати магазин. Перевірте логи.")
 
-# -------------------- FLASK --------------------
-
+# ---------- Flask routes ----------
 @app.route("/", methods=["GET"])
 def index():
     return "✅ LC Waikiki HR Bot online", 200
@@ -199,24 +307,22 @@ def webhook():
     try:
         raw = request.data.decode("utf-8")
         update = telebot.types.Update.de_json(raw)
-        bot.process_new_updates([update])
+        bot.process_new_updates([update])  # sync — стабільно під Gunicorn
         return "OK", 200
     except Exception as e:
         print("⚠️ Webhook processing error:", repr(e))
         return "Error", 500
 
-# -------------------- SETUP WEBHOOK --------------------
-
+# ---------- Webhook setup ----------
 try:
     bot.remove_webhook()
     time.sleep(0.5)
     bot.set_webhook(url=WEBHOOK_URL)
     print("✅ Webhook встановлено:", WEBHOOK_URL)
 except Exception as e:
-    print("⚠️ Не вдалося встановити webhook:", e)
+    print("⚠️ Не вдалося встановити webhook:", repr(e))
 
-# -------------------- ENTRYPOINT --------------------
-
+# ---------- Local run (debug) ----------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
