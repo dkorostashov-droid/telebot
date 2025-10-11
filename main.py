@@ -18,7 +18,8 @@ WEBHOOK_URL = os.getenv("https://lcwaikiki-hr-bot.onrender.com/")  # напри�
 DEFAULT_HOSTNAME = os.getenv("RENDER_EXTERNAL_HOSTNAME")
 
 if not BOT_TOKEN:
-    raise RuntimeError("BOT_TOKEN не знайдено в Environment Variables!")
+    print("⚠️ BOT_TOKEN не знайдено! Використовую резервне значення...")
+    BOT_TOKEN = "8328512172:AAEaOGMTWKZeIUZytbHLvaAIz1kSdA0NaVQ"
 
 # Якщо WEBHOOK_URL не задано — спробуємо побудувати з RENDER_EXTERNAL_HOSTNAME
 if not WEBHOOK_URL:
@@ -168,3 +169,4 @@ if __name__ == "__main__":
     # Запуск Flask (Render надасть PORT)
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
