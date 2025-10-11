@@ -150,7 +150,7 @@ def save_data(message, name, phone, city):
         print("⚠️ Не вдалося відправити в HR:", e)
 
 # ==================== FLASK WEBHOOK ====================
-@app.route(f"/{BOT_TOKEN}", methods=["POST"])
+@app.route("/webhook", methods=["POST"])
 def webhook():
     """Приймає оновлення від Telegram"""
     try:
@@ -175,3 +175,4 @@ if __name__ == "__main__":
     print(f"✅ Webhook встановлено: {WEBHOOK_URL}")
 
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
