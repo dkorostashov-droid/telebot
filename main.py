@@ -10,7 +10,7 @@ from flask import Flask, request
 
 # ---------------- CONFIG ----------------
 BOT_TOKEN = "8328512172:AAEaOGMTWKZeIUZytbHLvaAIz1kSdA0NaVQ"
-WEBHOOK_URL = "https://lcwaikiki-hr-bot.onrender.com/webhook"
+WEBHOOK_URL = "https://telebot-4snj.onrender.com/webhook"
 
 bot = telebot.TeleBot(BOT_TOKEN)
 app = Flask(__name__)
@@ -38,3 +38,4 @@ bot.remove_webhook()
 time.sleep(0.5)
 bot.set_webhook(url=WEBHOOK_URL)
 print(f"✅ Webhook встановлено: {WEBHOOK_URL}")
+
