@@ -33,9 +33,40 @@ def handle_all_messages(message):
 def index():
     return "✅ LC Waikiki HR Bot online and receiving Telegram updates", 200
 
+
 @app.route("/webhook", methods=["GET", "POST"])
 def webhook():
     if request.method == "GET":
         return "✅ LC Waikiki HR Bot працює", 200
 
     try:
+        # Лог заголовків
+        headers = dict(request.headers)
+        print("📨 Telegram headers:", {k: headers[k] for k in ("Content-Type", "User-Agent", "X-Forwarded-For") if k in headers})
+
+        # Лог тіла запиту
+        raw_data = request.data.decode("utf-8")
+        print("📦 Telegram update received:", raw_data)
+
+        # Обробка апдейту
+        update = telebot.types.Update.de_json(raw_data)
+        bot.process_new_updates([update])
+
+        print("✅ Update передано TeleBot")
+        return "OK", 200
+
+    except Exception as e:
+        print("⚠️ Webhook processing error:", repr(e))
+        return "Error", 500
+
+
+# ---------------- WEBHOOK SETUP ----------------
+bot.remove_webhook()
+time.sleep(1)
+bot.set_webhook(url=WEBHOOK_URL)
+print(f"✅ Webhook встановлено: {WEBHOOK_URL}")
+
+# ---------------- LOCAL RUN (для відладки) ----------------
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
