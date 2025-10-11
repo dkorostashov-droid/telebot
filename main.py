@@ -2,14 +2,15 @@ import os
 import time
 import telebot
 from flask import Flask, request
-from threading import Thread
 
 # ---------------- CONFIG ----------------
 BOT_TOKEN = os.getenv("BOT_TOKEN", "8328512172:AAEaOGMTWKZeIUZytbHLvaAIz1kSdA0NaVQ")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL", "https://telebot-4snj.onrender.com/webhook")
 
-bot = telebot.TeleBot(BOT_TOKEN, threaded=True)
 app = Flask(__name__)
+
+# створюємо TeleBot після Flask, щоб уникнути конфліктів при імпорті Gunicorn
+bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
 
 # ---------------- HANDLERS ----------------
 @bot.message_handler(commands=['start', 'help'])
@@ -50,11 +51,10 @@ def webhook():
         print("📦 Telegram update received:", raw_data)
 
         update = telebot.types.Update.de_json(raw_data)
+        # обробка без потоків — гарантовано в одному процесі Gunicorn
+        bot.process_new_updates([update])
 
-        # передаємо update у окремий потік — гарантує обробку навіть при паралельних воркерах
-        Thread(target=lambda: bot.process_new_updates([update])).start()
-
-        print("✅ Update передано TeleBot (через Thread)")
+        print("✅ Update передано TeleBot (sync mode)")
         return "OK", 200
 
     except Exception as e:
@@ -68,7 +68,7 @@ time.sleep(1)
 bot.set_webhook(url=WEBHOOK_URL)
 print(f"✅ Webhook встановлено: {WEBHOOK_URL}")
 
-# ---------------- LOCAL RUN (для Render/Gunicorn) ----------------
+# ---------------- LOCAL RUN ----------------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
