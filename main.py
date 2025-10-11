@@ -106,13 +106,18 @@ def save_data(message, name, phone, city):
 def index():
     return "✅ LC Waikiki HR Bot працює", 200
 
+
 @app.route("/webhook", methods=["POST"])
 def webhook():
+    print("📩 Отримано запит від Telegram!")
     try:
-        json_str = request.get_data().decode("utf-8")
-        update = telebot.types.Update.de_json(json_str)
+        print("📦 Headers:", dict(request.headers))
+        print("📦 Body:", request.get_data(as_text=True))
+
+        update = telebot.types.Update.de_json(request.stream.read().decode("utf-8"))
         bot.process_new_updates([update])
-        print("✅ Update отримано від Telegram")
+        print("✅ Update передано в TeleBot")
+
         return "OK", 200
     except Exception as e:
         print("⚠️ Webhook error:", e)
@@ -127,3 +132,4 @@ if __name__ == "__main__":
     bot.set_webhook(url=WEBHOOK_URL)
     print(f"✅ Webhook встановлено: {WEBHOOK_URL}")
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
