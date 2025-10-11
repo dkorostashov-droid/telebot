@@ -1,5 +1,5 @@
 # main.py
-# LC_WAIKIKI_UA_HR_bot — Final hardcoded stable version for Render
+# LC_WAIKIKI_UA_HR_bot — фінальна стабільна версія для Render
 
 import os
 import time
@@ -10,10 +10,15 @@ from flask import Flask, request
 import telebot
 from telebot import types
 
+# ---------------- DEBUG ----------------
+print("🔍 DEBUG: Environment keys visible to Python:")
+print(list(os.environ.keys()))
+print("🔍 BOT_TOKEN =", os.getenv("BOT_TOKEN"))
+
 # ---------------- CONFIG ----------------
-BOT_TOKEN = "8328512172:AAEaOGMTWKZeIUZytbHLvaAIz1kSdA0NaVQ"
-HR_CHAT_ID = -1003187426680
-WEBHOOK_URL = "https://lcwaikiki-hr-bot.onrender.com/webhook"
+BOT_TOKEN = os.getenv("BOT_TOKEN") or "8328512172:AAEaOGMTWKZeIUZytbHLvaAIz1kSdA0NaVQ"
+WEBHOOK_URL = os.getenv("WEBHOOK_URL") or "https://lcwaikiki-hr-bot.onrender.com/webhook"
+HR_CHAT_ID = int(os.getenv("HR_CHAT_ID", "-1003187426680"))
 
 bot = telebot.TeleBot(BOT_TOKEN, parse_mode=None)
 app = Flask(__name__)
@@ -108,8 +113,9 @@ def webhook():
 
 # ---------------- STARTUP ----------------
 if __name__ == "__main__":
+    print("🚀 Starting LC Waikiki HR Bot...")
     bot.remove_webhook()
-    time.sleep(0.5)
+    time.sleep(1)
     bot.set_webhook(url=WEBHOOK_URL)
     print(f"✅ Webhook встановлено: {WEBHOOK_URL}")
     port = int(os.environ.get("PORT", 10000))
