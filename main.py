@@ -1,4 +1,4 @@
-# LC Waikiki HR Bot 🇺🇦 — фінальний робочий варіант
+# LC Waikiki HR Bot 🇺🇦 — фінальний стабільний реліз
 # Автор: Денис + GPT-5 💙
 
 import os
@@ -220,6 +220,13 @@ def remove_old_webhook():
         print(f"❌ Помилка при спробі видалити webhook: {e}")
 
 remove_old_webhook()
+time.sleep(3)
 
 print("🚀 LC Waikiki HR Bot запущено (polling, з анімацією).")
-bot.infinity_polling(timeout=30, long_polling_timeout=20, skip_pending=True)
+
+while True:
+    try:
+        bot.infinity_polling(timeout=30, long_polling_timeout=20, skip_pending=True)
+    except Exception as e:
+        print(f"⚠️ Помилка polling: {e}")
+        time.sleep(5)
