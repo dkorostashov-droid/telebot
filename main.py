@@ -284,3 +284,18 @@ if __name__ == "__main__":
         long_polling_timeout=20,   # довжина long-poll запиту
         skip_pending=True          # пропустити застарілі апдейти
     )
+import threading
+from flask import Flask
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "LC Waikiki HR Bot is running."
+
+def run_polling():
+    bot.infinity_polling(timeout=30, long_polling_timeout=20, skip_pending=True)
+
+if __name__ == "__main__":
+    threading.Thread(target=run_polling).start()
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+
