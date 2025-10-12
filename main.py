@@ -1,4 +1,4 @@
-# LC Waikiki HR Bot 🇺🇦 — фінальний варіант із "живими" повідомленнями 💬
+# LC Waikiki HR Bot 🇺🇦 — фінальний "живий" варіант
 # Денис + GPT-5 💙
 
 import os
@@ -30,6 +30,7 @@ sheet = client.open(SPREADSHEET_NAME).worksheet(WORKSHEET_NAME)
 with open("store_list.json", "r", encoding="utf-8") as f:
     stores = json.load(f)
 
+# Сортуємо міста за кількістю магазинів
 city_counts = {}
 for store in stores:
     city = store["Місто"]
@@ -40,12 +41,6 @@ sorted_cities = sorted(city_counts, key=city_counts.get, reverse=True)
 bot = telebot.TeleBot(BOT_TOKEN, parse_mode="HTML")
 user_data = {}
 
-# ---------------------- HELPER ----------------------
-def slow_send(chat_id, text, delay=1.0, **kwargs):
-    """Надсилає повідомлення з невеликою паузою для "живого" ефекту"""
-    time.sleep(delay)
-    return bot.send_message(chat_id, text, **kwargs)
-
 # ---------------------- START ----------------------
 @bot.message_handler(commands=["start"])
 def start(message):
@@ -54,18 +49,20 @@ def start(message):
     for city in sorted_cities:
         markup.add(types.KeyboardButton(f"🏙️ {city}"))
 
-    slow_send(
-        message.chat.id,
-        "👋 <b>Вітаємо у LC Waikiki!</b>",
-        delay=0.6
-    )
-    slow_send(
+    bot.send_chat_action(message.chat.id, "typing")
+    time.sleep(1)
+    bot.send_message(
         message.chat.id,
         (
-            "Ми раді, що ви зацікавлені у роботі з нами 💙\n"
-            "Будь ласка, оберіть місто, у якому бажаєте працювати 🏙️"
+            "👋 <b>Вітаємо у LC Waikiki!</b>\n\n"
+            "Ми раді, що ви зацікавлені у роботі з нами 💙"
         ),
-        delay=1.2,
+    )
+
+    time.sleep(1)
+    bot.send_message(
+        message.chat.id,
+        "Будь ласка, оберіть місто, у якому бажаєте працювати 🏙️",
         reply_markup=markup
     )
 
@@ -80,15 +77,11 @@ def choose_city(message):
     for store in malls:
         markup.add(types.KeyboardButton(f"🏬 {store['ТЦ']}"))
 
-    slow_send(
+    bot.send_chat_action(message.chat.id, "typing")
+    time.sleep(1)
+    bot.send_message(
         message.chat.id,
-        f"🏙️ <b>{city}</b> — чудовий вибір! 💫",
-        delay=0.8
-    )
-    slow_send(
-        message.chat.id,
-        "Оберіть торговий центр, у якому бажаєте працювати 🏬",
-        delay=1.0,
+        f"🏙️ <b>{city}</b>\n\nОберіть торговий центр, у якому бажаєте працювати 🏬",
         reply_markup=markup
     )
 
@@ -102,10 +95,11 @@ def choose_mall(message):
         return
 
     user_data[message.chat.id].update(store)
-    slow_send(
+    bot.send_chat_action(message.chat.id, "typing")
+    time.sleep(1)
+    bot.send_message(
         message.chat.id,
-        "📝 Введіть, будь ласка, ваше <b>ПІБ</b> (повністю):",
-        delay=0.8,
+        "👤 Введіть, будь ласка, ваше <b>ПІБ</b> (повністю):",
         reply_markup=types.ReplyKeyboardRemove()
     )
     bot.register_next_step_handler(message, step_name)
@@ -114,33 +108,35 @@ def choose_mall(message):
 def step_name(message):
     name = message.text.strip()
     if len(name.split()) < 2:
-        slow_send(message.chat.id, "📝 Введіть, будь ласка, повне <b>ПІБ</b>:", delay=0.6)
+        bot.send_message(message.chat.id, "📝 Введіть, будь ласка, повне <b>ПІБ</b>:")
         return bot.register_next_step_handler(message, step_name)
 
     user_data[message.chat.id]["name"] = name
-    slow_send(message.chat.id, "📞 Введіть ваш номер телефону (наприклад, +380XXXXXXXXX):", delay=0.9)
+    bot.send_chat_action(message.chat.id, "typing")
+    time.sleep(1)
+    bot.send_message(message.chat.id, "📞 Введіть ваш номер телефону (наприклад, +380XXXXXXXXX):")
     bot.register_next_step_handler(message, step_phone)
 
 # ---------------------- PHONE ----------------------
 def step_phone(message):
     phone = message.text.strip()
     if not phone or len(phone) < 9:
-        slow_send(message.chat.id, "⚠️ Введіть, будь ласка, коректний номер телефону:", delay=0.7)
+        bot.send_message(message.chat.id, "⚠️ Введіть, будь ласка, коректний номер телефону:")
         return bot.register_next_step_handler(message, step_phone)
 
     user_data[message.chat.id]["phone"] = phone
-
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
     markup.add("✅ Так, підтверджую", "❌ Скасувати")
 
-    slow_send(
+    bot.send_chat_action(message.chat.id, "typing")
+    time.sleep(1)
+    bot.send_message(
         message.chat.id,
         (
             "🔒 Ви підтверджуєте передачу своїх контактних даних HR-відділу LC Waikiki?\n\n"
             "⚖️ Натискаючи «Так, підтверджую», ви погоджуєтесь на обробку персональних даних "
             "відповідно до Закону України «Про захист персональних даних»."
         ),
-        delay=1.0,
         reply_markup=markup
     )
 
@@ -179,20 +175,16 @@ def confirm(message):
         f"📅 <b>Дата:</b> {now}\n"
         "━━━━━━━━━━━━━━━━━━━━━━"
     )
+
     bot.send_message(HR_CHAT_ID, hr_text)
 
-    slow_send(
+    bot.send_chat_action(message.chat.id, "typing")
+    time.sleep(1.2)
+    bot.send_message(
         message.chat.id,
-        "🎉 <b>Дякуємо!</b>",
-        delay=0.8
-    )
-    slow_send(
-        message.chat.id,
-        (
-            "Ваша заявка успішно надіслана HR-відділу LC Waikiki 👩‍💼\n"
-            "Очікуйте на відповідь найближчим часом 💬"
-        ),
-        delay=1.2,
+        "🎉 <b>Дякуємо!</b>\n"
+        "Ваша заявка успішно передана HR-відділу LC Waikiki 👩‍💼\n"
+        "Очікуйте на відповідь найближчим часом 💬",
         reply_markup=types.ReplyKeyboardRemove()
     )
 
@@ -202,8 +194,8 @@ def confirm(message):
 @bot.message_handler(func=lambda msg: msg.text == "❌ Скасувати")
 def cancel(message):
     user_data.pop(message.chat.id, None)
-    slow_send(message.chat.id, "❌ Заявку скасовано. Щоб почати спочатку — натисніть /start", delay=0.6)
+    bot.send_message(message.chat.id, "❌ Заявку скасовано. Щоб почати спочатку — натисніть /start")
 
 # ---------------------- RUN ----------------------
-print("🚀 LC Waikiki HR Bot запущено (polling).")
+print("🚀 LC Waikiki HR Bot запущено (polling, з анімацією).")
 bot.infinity_polling(timeout=30, long_polling_timeout=20, skip_pending=True)
