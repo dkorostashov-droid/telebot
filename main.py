@@ -1,5 +1,5 @@
-# LC Waikiki HR Bot 🇺🇦 — фінальний "живий" варіант
-# Денис + GPT-5 💙
+# LC Waikiki HR Bot 🇺🇦 — фінальний робочий варіант
+# Автор: Денис + GPT-5 💙
 
 import os
 import json
@@ -9,6 +9,7 @@ import telebot
 from telebot import types
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import requests
 
 # ---------------------- CONFIG ----------------------
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -55,7 +56,8 @@ def start(message):
         message.chat.id,
         (
             "👋 <b>Вітаємо у LC Waikiki!</b>\n\n"
-            "Ми раді, що ви зацікавлені у роботі з нами 💙"
+            "Ми раді, що ви зацікавлені у роботі з нами 💙\n"
+            "Давайте зробимо кілька простих кроків, щоб надіслати заявку 🧾"
         ),
     )
 
@@ -180,15 +182,23 @@ def confirm(message):
 
     bot.send_chat_action(message.chat.id, "typing")
     time.sleep(1.2)
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add("🔁 Подати ще одну заявку")
+
     bot.send_message(
         message.chat.id,
         "🎉 <b>Дякуємо!</b>\n"
         "Ваша заявка успішно передана HR-відділу LC Waikiki 👩‍💼\n"
         "Очікуйте на відповідь найближчим часом 💬",
-        reply_markup=types.ReplyKeyboardRemove()
+        reply_markup=markup
     )
 
     del user_data[message.chat.id]
+
+# ---------------------- RESTART ----------------------
+@bot.message_handler(func=lambda msg: msg.text == "🔁 Подати ще одну заявку")
+def restart(message):
+    start(message)
 
 # ---------------------- CANCEL ----------------------
 @bot.message_handler(func=lambda msg: msg.text == "❌ Скасувати")
@@ -197,5 +207,19 @@ def cancel(message):
     bot.send_message(message.chat.id, "❌ Заявку скасовано. Щоб почати спочатку — натисніть /start")
 
 # ---------------------- RUN ----------------------
+def remove_old_webhook():
+    """Видаляє старий webhook перед запуском polling."""
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/deleteWebhook"
+    try:
+        response = requests.get(url)
+        if response.status_code == 200 and '"ok":true' in response.text:
+            print("✅ Старий webhook успішно видалено перед запуском polling.")
+        else:
+            print(f"⚠️ Не вдалося видалити webhook: {response.text}")
+    except Exception as e:
+        print(f"❌ Помилка при спробі видалити webhook: {e}")
+
+remove_old_webhook()
+
 print("🚀 LC Waikiki HR Bot запущено (polling, з анімацією).")
 bot.infinity_polling(timeout=30, long_polling_timeout=20, skip_pending=True)
