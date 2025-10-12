@@ -1,31 +1,32 @@
-# main.py
-# LC Waikiki HR Bot — FAST POLLING EDITION (UA only replies)
-# ✅ Без Flask/webhook (швидко), ✅ Google Sheets, ✅ Всі магазини в коді, ✅ /addstore (admins)
+# main.py — LC Waikiki HR Bot (UA, FAST POLLING + Mini Flask)
+# Автор: Денис + GPT-5 Thinking
+# ✅ Усі магазини в коді, ✅ Google Sheets (8 колонок), ✅ HR-повідомлення, ✅ /addstore (admins)
 
 import os
 import re
 import json
-import time
 import datetime
+import threading
 from collections import defaultdict
 from typing import List, Dict
 
 import telebot
 from telebot import types
+from flask import Flask
 
-# --------------- CONFIG (Env) ----------------
+# ------------------ ENV ------------------
 BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
 HR_CHAT_ID = int(os.getenv("HR_CHAT_ID", "-1003187426680"))
 ADMIN_IDS = [int(x) for x in os.getenv("ADMIN_IDS", "").split(",") if x.strip().isdigit()]
-
 SPREADSHEET_NAME = os.getenv("SPREADSHEET_NAME", "LCWAIKIKI_candidates").strip()
 WORKSHEET_NAME  = os.getenv("WORKSHEET_NAME", "work").strip()
 GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS", "").strip()
+PORT = int(os.environ.get("PORT", 10000))
 
 if not BOT_TOKEN:
-    raise RuntimeError("BOT_TOKEN не задано в Environment Variables!")
+    raise RuntimeError("❌ BOT_TOKEN не задано в Environment Variables!")
 
-# --------------- Google Sheets ----------------
+# -------- Google Sheets (через GOOGLE_CREDENTIALS у змінних середовища) --------
 worksheet = None
 if GOOGLE_CREDENTIALS:
     try:
@@ -47,59 +48,61 @@ if GOOGLE_CREDENTIALS:
 else:
     print("⚠️ GOOGLE_CREDENTIALS не задано — запис у таблицю буде пропущено.")
 
-# --------------- Магазини (повний список у коді) ---------------
+# ------------------ Всі магазини в коді ------------------
+# Поля: city, mall, corp_phone, address
 STORES: List[Dict[str, str]] = [
-  {"ТЦ": "Ocean Plaza", "Місто": "Київ", "Телефон": "(067) 829-46-29", "Адреса": "вул.Антоновича,176,03150"},
-  {"ТЦ": "Riviera", "Місто": "Одеса", "Телефон": "(067) 825-34-38", "Адреса": "село Фонтанка, Південна дорога,101А,65069"},
-  {"ТЦ": "Forum Lviv", "Місто": "Львів", "Телефон": "(067) 825-34-39", "Адреса": "вул.Під дубом, 7Б,79058"},
-  {"ТЦ": "Prospect", "Місто": "Київ", "Телефон": "(067) 825-34-36", "Адреса": "вул. Гната Хоткевича, 1-В,02000"},
-  {"ТЦ": "Holywood", "Місто": "Чернігів", "Телефон": "(067) 828-28-99", "Адреса": "вул.77-ї Гвардійської Дивізії, 1-В,14000"},
-  {"ТЦ": "City Mall", "Місто": "Запоріжжя", "Телефон": "(067) 827-38-70", "Адреса": "вул.Запорізька, 1Б,69002"},
-  {"ТЦ": "French Buelvard", "Місто": "Харків", "Телефон": "(067) 446 89 87", "Адреса": "вул.Ак.Павлова, 44-Б,61038"},
-  {"ТЦ": "Global", "Місто": "Житомир", "Телефон": "(067) 829-28-09", "Адреса": "вул.Київська,77,10001"},
-  {"ТЦ": "Sun Gallery", "Місто": "Кривий Ріг", "Телефон": "(067) 829-59-13", "Адреса": "майдан Олександра Химиченка, буд. 1,50000"},
-  {"ТЦ": "Victoria Gardens", "Місто": "Львів", "Телефон": "(067) 828-11-32", "Адреса": "вул.Кульпарківська, 226-А,79071"},
-  {"ТЦ": "Karavan", "Місто": "Дніпро", "Телефон": "(067) 446-89-83", "Адреса": "вул.Нижньодніпровська, 17-б,52005"},
-  {"ТЦ": "Most City", "Місто": "Дніпро", "Телефон": "(067) 826-16-74", "Адреса": "вул.Глинки, 2,49000"},
-  {"ТЦ": "Lavina", "Місто": "Київ", "Телефон": "(067) 824-03-57", "Адреса": "вул. Берковецька, 6Д,04128"},
-  {"ТЦ": "New Way", "Місто": "Київ", "Телефон": "(067) 446-89-81", "Адреса": "вул.Арх.Вербицького, 1,02068"},
-  {"ТЦ": "Sky Mall", "Місто": "Київ", "Телефон": "(067) 223-78-44", "Адреса": "пр-т Р. Шухевича, 2Т,02218"},
-  {"ТЦ": "Kiev Mall", "Місто": "Полтава", "Телефон": "(067) 446-89-80", "Адреса": "вул. Зіньківська, 6/1А,36000"},
-  {"ТЦ": "Karavan", "Місто": "Київ", "Телефон": "(067) 642-74-78", "Адреса": "вул.Лугова,12,02000"},
-  {"ТЦ": "King Cross", "Місто": "Львів", "Телефон": "(067) 642-74-79", "Адреса": "вул. Стрийська, 30, с.Сокільники,81130"},
-  {"ТЦ": "Fontan Sky Mall", "Місто": "Одеса", "Телефон": "(067) 543-19-44", "Адреса": "пров. Семафорний,4е,65012"},
-  {"ТЦ": "TSUM", "Місто": "Луцьк", "Телефон": "(067) 446-90-02", "Адреса": "пр. Волі, 1,43000"},
-  {"ТЦ": "Podolyany", "Місто": "Тернопіль", "Телефон": "(067) 829-47-90", "Адреса": "вул.Текстильна, 28-Ч ,46400"},
-  {"ТЦ": "Sky Park", "Місто": "Вінниця", "Телефон": "(067) 543-14-50", "Адреса": "вул. Миколи Оводова, 51,21000"},
-  {"ТЦ": "Zlata Plaza", "Місто": "Рівне", "Телефон": "(067) 543-89-21", "Адреса": "вул. Борисенка, 1,33000"},
-  {"ТЦ": "OAZIS", "Місто": "Хмельницький", "Телефон": "(067) 400-79-52", "Адреса": "вул.Степана Бандери 2А,29000"},
-  {"ТЦ": "Veles Mall", "Місто": "Івано-Франківськ", "Телефон": "(067) 700-50-92", "Адреса": "с. Вовчинець, вул. Вовчинецька, буд. 225, корп. „а” ,76006"},
-  {"ТЦ": "Promenada Park", "Місто": "Київ", "Телефон": "(067) 825-34-42", "Адреса": "вул. Велика Кільцева, буд. 4-Ф"},
-  {"ТЦ": "City Center", "Місто": "Одеса", "Телефон": "(067) 825-34-41", "Адреса": "пр.Небесної Сотні 2,65101"},
-  {"ТЦ": "River Mall", "Місто": "Київ", "Телефон": "(067) 245-05-98", "Адреса": "вул.Дніпровська Набережна 12,02000"},
-  {"ТЦ": "Blockbuster Mall", "Місто": "Київ", "Телефон": "(067) 658-63-42", "Адреса": "пр-т Степана Бандери 36"},
-  {"ТЦ": "CityCenter", "Місто": "Миколаїв", "Телефон": "(063) 457 14 58", "Адреса": "пр-т Центральний 98"},
-  {"ТЦ": "Retroville", "Місто": "Київ", "Телефон": "(067) 232-26-41", "Адреса": "Пр-т Європейського Союзу 47"},
-  {"ТЦ": "Nikolsky", "Місто": "Харків", "Телефон": "(067)6586312", "Адреса": "вул. Г. Сковороди 2-А"},
-  {"ТЦ": "Apollo", "Місто": "Дніпро", "Телефон": "(067) 658-64-10", "Адреса": "вул.Незалежності 32А"},
-  {"ТЦ": "ТРЦ Київ", "Місто": "Суми", "Телефон": "(067) 658-63-29", "Адреса": "вул.Кооперативна 1"},
-  {"ТЦ": "DEPOt Mall", "Місто": "Чернівці", "Телефон": "(067)232-10-58", "Адреса": "вул. Головна, буд. 265, корпус 1, літ. 'А'"},
-  {"ТЦ": "ТРЦ Мегамолл", "Місто": "Вінниця", "Телефон": "(067) 658-62-61", "Адреса": "вул. 600 річчя 17E"},
-  {"ТЦ": "City Center Kotovskii (Odesa)", "Місто": "Одеса", "Телефон": "(067) 232-26-83", "Адреса": "Одеса, Одеська область, вул. Давида Ойстраха, 32"},
-  {"ТЦ": "Любава", "Місто": "Черкаси", "Телефон": "(067) 232-44-16", "Адреса": "буль.Тараса Шевченка 208/1"},
-  {"ТЦ": "TSUM", "Місто": "Кам'янське", "Телефон": "(067) 232-44-50", "Адреса": "просп.Тараса Шевченка 9"},
-  {"ТЦ": "KHRESCHATYK", "Місто": "Київ", "Телефон": "(067) 232-26-95", "Адреса": "Хрещатик, 50"},
-  {"ТЦ": "ТРЦ Острів", "Місто": "Одеса", "Телефон": "(067) 232-47-75", "Адреса": "вул. Новощепний Ряд, 2"},
-  {"ТЦ": "ТРЦ Район", "Місто": "Київ", "Телефон": "(067) 245-06-01", "Адреса": "вул.Лаврухина, 4"},
-  {"ТЦ": "ТРЦ Республіка", "Місто": "Київ", "Телефон": "(067) 113-68-93", "Адреса": "вул.Кільцева дорога, 1"},
-  {"ТЦ": "ТРЦ Депот", "Місто": "Кропивницький", "Телефон": "(063) 457 16 30", "Адреса": "вул. Велика Перспективна, 48, 25000"},
-  {"ТЦ": "ТРЦ Майдан", "Місто": "Шептицький", "Телефон": "(063) 457 16 20", "Адреса": "вул. Героїв Майдану, 10, 80100"},
-  {"ТЦ": "ТРЦ Комод", "Місто": "Київ", "Телефон": "(063) 457 16 19", "Адреса": "вул.Митрополита Андрія Шептицького, 4-А, 02002"},
-  {"ТЦ": "ТРЦ Клас", "Місто": "Харків", "Телефон": "(063) 457 03 10", "Адреса": "вул. Дудинської, 1-А, 61064"},
-  {"ТЦ": "Cosmo Multimoll", "Місто": "Київ", "Телефон": "", "Адреса": "вул. Вадима Гетьмана, 6"}
+  {"mall": "Ocean Plaza", "city": "Київ", "corp_phone": "(067) 829-46-29", "address": "вул.Антоновича,176,03150"},
+  {"mall": "Riviera", "city": "Одеса", "corp_phone": "(067) 825-34-38", "address": "село Фонтанка, Південна дорога,101А,65069"},
+  {"mall": "Forum Lviv", "city": "Львів", "corp_phone": "(067) 825-34-39", "address": "вул.Під дубом, 7Б,79058"},
+  {"mall": "Prospect", "city": "Київ", "corp_phone": "(067) 825-34-36", "address": "вул. Гната Хоткевича, 1-В,02000"},
+  {"mall": "Holywood", "city": "Чернігів", "corp_phone": "(067) 828-28-99", "address": "вул.77-ї Гвардійської Дивізії, 1-В,14000"},
+  {"mall": "City Mall", "city": "Запоріжжя", "corp_phone": "(067) 827-38-70", "address": "вул.Запорізька, 1Б,69002"},
+  {"mall": "French Buelvard", "city": "Харків", "corp_phone": "(067) 446 89 87", "address": "вул.Ак.Павлова, 44-Б,61038"},
+  {"mall": "Global", "city": "Житомир", "corp_phone": "(067) 829-28-09", "address": "вул.Київська,77,10001"},
+  {"mall": "Sun Gallery", "city": "Кривий Ріг", "corp_phone": "(067) 829-59-13", "address": "майдан Олександра Химиченка, буд. 1,50000"},
+  {"mall": "Victoria Gardens", "city": "Львів", "corp_phone": "(067) 828-11-32", "address": "вул.Кульпарківська, 226-А,79071"},
+  {"mall": "Karavan", "city": "Дніпро", "corp_phone": "(067) 446-89-83", "address": "вул.Нижньодніпровська, 17-б,52005"},
+  {"mall": "Most City", "city": "Дніпро", "corp_phone": "(067) 826-16-74", "address": "вул.Глинки, 2,49000"},
+  {"mall": "Lavina", "city": "Київ", "corp_phone": "(067) 824-03-57", "address": "вул. Берковецька, 6Д,04128"},
+  {"mall": "New Way", "city": "Київ", "corp_phone": "(067) 446-89-81", "address": "вул.Арх.Вербицького, 1,02068"},
+  {"mall": "Sky Mall", "city": "Київ", "corp_phone": "(067) 223-78-44", "address": "пр-т Р. Шухевича, 2Т,02218"},
+  {"mall": "Kiev Mall", "city": "Полтава", "corp_phone": "(067) 446-89-80", "address": "вул. Зіньківська, 6/1А,36000"},
+  {"mall": "Karavan", "city": "Київ", "corp_phone": "(067) 642-74-78", "address": "вул.Лугова,12,02000"},
+  {"mall": "King Cross", "city": "Львів", "corp_phone": "(067) 642-74-79", "address": "вул. Стрийська, 30, с.Сокільники,81130"},
+  {"mall": "Fontan Sky Mall", "city": "Одеса", "corp_phone": "(067) 543-19-44", "address": "пров. Семафорний,4е,65012"},
+  {"mall": "TSUM", "city": "Луцьк", "corp_phone": "(067) 446-90-02", "address": "пр. Волі, 1,43000"},
+  {"mall": "Podolyany", "city": "Тернопіль", "corp_phone": "(067) 829-47-90", "address": "вул.Текстильна, 28-Ч ,46400"},
+  {"mall": "Sky Park", "city": "Вінниця", "corp_phone": "(067) 543-14-50", "address": "вул. Миколи Оводова, 51,21000"},
+  {"mall": "Zlata Plaza", "city": "Рівне", "corp_phone": "(067) 543-89-21", "address": "вул. Борисенка, 1,33000"},
+  {"mall": "OAZIS", "city": "Хмельницький", "corp_phone": "(067) 400-79-52", "address": "вул.Степана Бандери 2А,29000"},
+  {"mall": "Veles Mall", "city": "Івано-Франківськ", "corp_phone": "(067) 700-50-92", "address": "с. Вовчинець, вул. Вовчинецька, буд. 225, корп. „а” ,76006"},
+  {"mall": "Promenada Park", "city": "Київ", "corp_phone": "(067) 825-34-42", "address": "вул. Велика Кільцева, буд. 4-Ф"},
+  {"mall": "City Center", "city": "Одеса", "corp_phone": "(067) 825-34-41", "address": "пр.Небесної Сотні 2,65101"},
+  {"mall": "River Mall", "city": "Київ", "corp_phone": "(067) 245-05-98", "address": "вул.Дніпровська Набережна 12,02000"},
+  {"mall": "Blockbuster Mall", "city": "Київ", "corp_phone": "(067) 658-63-42", "address": "пр-т Степана Бандери 36"},
+  {"mall": "CityCenter", "city": "Миколаїв", "corp_phone": "(063) 457 14 58", "address": "пр-т Центральний 98"},
+  {"mall": "Retroville", "city": "Київ", "corp_phone": "(067) 232-26-41", "address": "Пр-т Європейського Союзу 47"},
+  {"mall": "Nikolsky", "city": "Харків", "corp_phone": "(067)6586312", "address": "вул. Г. Сковороди 2-А"},
+  {"mall": "Apollo", "city": "Дніпро", "corp_phone": "(067) 658-64-10", "address": "вул.Незалежності 32А"},
+  {"mall": "ТРЦ Київ", "city": "Суми", "corp_phone": "(067) 658-63-29", "address": "вул.Кооперативна 1"},
+  {"mall": "DEPOt Mall", "city": "Чернівці", "corp_phone": "(067)232-10-58", "address": "вул. Головна, буд. 265, корпус 1, літ. 'А'"},
+  {"mall": "ТРЦ Мегамолл", "city": "Вінниця", "corp_phone": "(067) 658-62-61", "address": "вул. 600 річчя 17E"},
+  {"mall": "City Center Kotovskii (Odesa)", "city": "Одеса", "corp_phone": "(067) 232-26-83", "address": "Одеса, Одеська область, вул. Давида Ойстраха, 32"},
+  {"mall": "Любава", "city": "Черкаси", "corp_phone": "(067) 232-44-16", "address": "буль.Тараса Шевченка 208/1"},
+  {"mall": "TSUM", "city": "Кам'янське", "corp_phone": "(067) 232-44-50", "address": "просп.Тараса Шевченка 9"},
+  {"mall": "KHRESCHATYK", "city": "Київ", "corp_phone": "(067) 232-26-95", "address": "Хрещатик, 50"},
+  {"mall": "ТРЦ Острів", "city": "Одеса", "corp_phone": "(067) 232-47-75", "address": "вул. Новощепний Ряд, 2"},
+  {"mall": "ТРЦ Район", "city": "Київ", "corp_phone": "(067) 245-06-01", "address": "вул.Лаврухина, 4"},
+  {"mall": "ТРЦ Республіка", "city": "Київ", "corp_phone": "(067) 113-68-93", "address": "вул.Кільцева дорога, 1"},
+  {"mall": "ТРЦ Депот", "city": "Кропивницький", "corp_phone": "(063) 457 16 30", "address": "вул. Велика Перспективна, 48, 25000"},
+  {"mall": "ТРЦ Майдан", "city": "Шептицький", "corp_phone": "(063) 457 16 20", "address": "вул. Героїв Майдану, 10, 80100"},
+  {"mall": "ТРЦ Комод", "city": "Київ", "corp_phone": "(063) 457 16 19", "address": "вул.Митрополита Андрія Шептицького, 4-А, 02002"},
+  {"mall": "ТРЦ Клас", "city": "Харків", "corp_phone": "(063) 457 03 10", "address": "вул. Дудинської, 1-А, 61064"},
+  # Доданий новий магазин:
+  {"mall": "Cosmo Multimoll", "city": "Київ", "corp_phone": "", "address": "вул. Вадима Гетьмана, 6"},
 ]
 
-# Додаткові (динамічні) магазини — /addstore
+# Динамічні магазини (через /addstore)
 DYNAMIC_FILE = "stores_dynamic.json"
 
 def load_dynamic() -> List[Dict[str, str]]:
@@ -107,15 +110,15 @@ def load_dynamic() -> List[Dict[str, str]]:
         if not os.path.exists(DYNAMIC_FILE):
             return []
         with open(DYNAMIC_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            return data if isinstance(data, list) else []
+            d = json.load(f)
+            return d if isinstance(d, list) else []
     except Exception as e:
         print("⚠️ Помилка читання stores_dynamic.json:", e)
         return []
 
-def save_dynamic(city: str, mall: str, phone: str, addr: str) -> bool:
+def save_dynamic(city: str, mall: str, corp_phone: str, address: str) -> bool:
     d = load_dynamic()
-    d.append({"ТЦ": mall, "Місто": city, "Телефон": phone, "Адреса": addr})
+    d.append({"mall": mall, "city": city, "corp_phone": corp_phone, "address": address})
     try:
         with open(DYNAMIC_FILE, "w", encoding="utf-8") as f:
             json.dump(d, f, ensure_ascii=False, indent=2)
@@ -128,128 +131,174 @@ def save_dynamic(city: str, mall: str, phone: str, addr: str) -> bool:
 def all_stores() -> List[Dict[str, str]]:
     return STORES + load_dynamic()
 
-def store_label(s: Dict[str, str]) -> str:
-    name = s.get("ТЦ", "").strip()
-    addr = s.get("Адреса", "").strip()
-    phone = s.get("Телефон", "").strip()
-    return f"{name} — {addr}{(' ☎️ ' + phone) if phone else ''}"
+# ------------------ Допоміжні ------------------
+def cities_sorted_desc() -> List[str]:
+    by_city = defaultdict(int)
+    for s in all_stores():
+        by_city[s["city"].strip()] += 1
+    # сортуємо за кількістю магазинів (desc), потім за назвою
+    return [c for c, _ in sorted(by_city.items(), key=lambda kv: (-kv[1], kv[0]))]
 
-def group_by_city() -> Dict[str, List[str]]:
-    city_map = defaultdict(list)
-    stores = all_stores()
-    print(f"📦 Магазинів (разом): {len(stores)}")
-    for s in stores:
-        city = (s.get("Місто") or "").strip() or "Інше"
-        city_map[city].append(store_label(s))
-    return city_map
+def malls_by_city(city: str) -> List[Dict[str, str]]:
+    city = city.strip()
+    return [s for s in all_stores() if s["city"].strip() == city]
 
-# ---------- Bot init ----------
-bot = telebot.TeleBot(BOT_TOKEN, parse_mode=None, threaded=True, num_threads=4)
-
-# ---------- Helpers ----------
 PHONE_RE = re.compile(r"^\+?[\d\s\-\(\)]{9,20}$")
 def valid_phone(p: str) -> bool:
     return bool(PHONE_RE.match((p or "").strip()))
 
-# ---------- Flow ----------
+# ------------------ Bot ------------------
+bot = telebot.TeleBot(BOT_TOKEN, parse_mode=None, threaded=True, num_threads=4)
+
+# Стан користувачів
+STATE = {}  # chat_id -> dict(city, mall, address, corp_phone, pib, phone)
+
 @bot.message_handler(commands=["start"])
 def start(message):
-    text = (
+    STATE[message.chat.id] = {}
+    cities = cities_sorted_desc()
+    kb = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+    for c in cities:
+        kb.add(types.KeyboardButton(c))
+    bot.send_message(
+        message.chat.id,
         "👋 Вітаємо в *LC Waikiki HR Bot*!\n\n"
-        "Щоб продовжити та надіслати свої контактні дані для HR, "
-        "потрібно погодитись на обробку персональних даних."
+        "Оберіть, будь ласка, *місто*, у якому хочете працювати:",
+        parse_mode="Markdown",
+        reply_markup=kb
     )
-    kb = types.InlineKeyboardMarkup()
-    kb.add(types.InlineKeyboardButton("✅ Погоджуюсь", callback_data="consent_ok"))
-    bot.send_message(message.chat.id, text, parse_mode="Markdown", reply_markup=kb)
 
-@bot.callback_query_handler(func=lambda c: c.data == "consent_ok")
-def on_consent(call):
-    bot.answer_callback_query(call.id)
-    msg = bot.send_message(call.message.chat.id, "📋 *Крок 1/5*\nВведіть, будь ласка, ваше *Ім'я та Прізвище*:", parse_mode="Markdown")
-    bot.register_next_step_handler(msg, step_name)
+@bot.message_handler(func=lambda m: m.text in cities_sorted_desc())
+def choose_city(message):
+    city = message.text.strip()
+    STATE.setdefault(message.chat.id, {})["city"] = city
 
-def step_name(message):
-    name = (message.text or "").strip()
-    if not name or len(name) < 3:
-        msg = bot.send_message(message.chat.id, "🙈 Імʼя виглядає некоректним. Введіть *Ім'я та Прізвище* ще раз:", parse_mode="Markdown")
-        return bot.register_next_step_handler(msg, step_name)
-    msg = bot.send_message(message.chat.id, "📞 *Крок 2/5*\nВведіть ваш *номер телефону* (наприклад, `+380XXXXXXXXX`):", parse_mode="Markdown")
-    bot.register_next_step_handler(msg, step_phone, name)
+    malls = malls_by_city(city)
+    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    for s in malls:
+        label = s["mall"]
+        kb.add(types.KeyboardButton(label))
+    bot.send_message(
+        message.chat.id,
+        f"🏬 *Місто:* _{city}_\nОберіть *торговий центр (ТРЦ)*:",
+        parse_mode="Markdown",
+        reply_markup=kb
+    )
 
-def step_phone(message, name):
+@bot.message_handler(func=lambda m: any(s["mall"] == m.text for s in all_stores()))
+def choose_mall(message):
+    mall = message.text.strip()
+    # Знаходимо магазин
+    store = next((s for s in all_stores() if s["mall"] == mall), None)
+    if not store:
+        return bot.send_message(message.chat.id, "😬 Не знайшов цей ТРЦ. Спробуйте ще раз /start")
+
+    st = STATE.setdefault(message.chat.id, {})
+    st["mall"] = store["mall"]
+    st["address"] = store.get("address", "")
+    st["corp_phone"] = store.get("corp_phone", "")
+
+    msg = bot.send_message(
+        message.chat.id,
+        "🧍‍♂️ *Крок 1/3*\nВведіть, будь ласка, ваше *ПІБ* (повністю):",
+        parse_mode="Markdown",
+        reply_markup=types.ReplyKeyboardRemove()
+    )
+    bot.register_next_step_handler(msg, step_pib)
+
+def step_pib(message):
+    pib = (message.text or "").strip()
+    if len(pib) < 3:
+        msg = bot.send_message(message.chat.id, "🙈 Вкажіть, будь ласка, *ПІБ* коректно:", parse_mode="Markdown")
+        return bot.register_next_step_handler(msg, step_pib)
+    STATE.setdefault(message.chat.id, {})["pib"] = pib
+
+    msg = bot.send_message(
+        message.chat.id,
+        "📞 *Крок 2/3*\nВведіть ваш *номер телефону* (наприклад, +380XXXXXXXXX):",
+        parse_mode="Markdown"
+    )
+    bot.register_next_step_handler(msg, step_phone)
+
+def step_phone(message):
     phone = (message.text or "").strip()
     if not valid_phone(phone):
-        msg = bot.send_message(message.chat.id, "📵 Номер виглядає некоректним. Введіть *номер телефону* ще раз:", parse_mode="Markdown")
-        return bot.register_next_step_handler(msg, step_phone, name)
+        msg = bot.send_message(message.chat.id, "📵 Номер виглядає некоректним. Введіть ще раз:", parse_mode="Markdown")
+        return bot.register_next_step_handler(msg, step_phone)
+    STATE.setdefault(message.chat.id, {})["phone"] = phone
 
-    # Підготуємо міста одразу
-    city_map = group_by_city()
-    if not city_map:
-        bot.send_message(message.chat.id, "⚠️ Наразі перелік магазинів порожній. Спробуйте пізніше.")
-        return
-
-    cities_sorted = sorted(city_map.keys(), key=lambda c: len(city_map[c]), reverse=True)
-    kb = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
-    for c in cities_sorted:
-        kb.add(types.KeyboardButton(c))
-    msg = bot.send_message(message.chat.id, "🌆 *Крок 3/5*\nОберіть ваше *місто*:", parse_mode="Markdown", reply_markup=kb)
-    bot.register_next_step_handler(msg, step_city, name, phone, city_map)
-
-def step_city(message, name, phone, city_map):
-    city = (message.text or "").strip()
-    if city not in city_map:
-        msg = bot.send_message(message.chat.id, "😬 Будь ласка, оберіть *місто* зі списку нижче:", parse_mode="Markdown")
-        return bot.register_next_step_handler(msg, step_city, name, phone, city_map)
-
-    stores = city_map[city]
     kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    for s in stores:
-        label = s if len(s) <= 60 else s[:57] + "…"
-        kb.add(types.KeyboardButton(label))
-    msg = bot.send_message(message.chat.id, f"🏬 *Крок 4/5*\nОберіть *магазин* у місті _{city}_:", parse_mode="Markdown", reply_markup=kb)
-    bot.register_next_step_handler(msg, step_store, name, phone, city)
-
-def step_store(message, name, phone, city):
-    store = (message.text or "").strip()
-    if not store:
-        msg = bot.send_message(message.chat.id, "Будь ласка, оберіть магазин зі списку нижче.")
-        return bot.register_next_step_handler(msg, step_store, name, phone, city)
-
-    ts = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
-    # Підтвердження користувачу
-    bot.send_message(message.chat.id, "✅ *Крок 5/5*\nДякуємо! Ваша заявка прийнята 💙\nНаша HR-команда звʼяжеться з вами найближчим часом.", parse_mode="Markdown", reply_markup=types.ReplyKeyboardRemove())
-    # HR повідомлення
-    hr_text = (
-        "📩 *Нова заявка від кандидата*\n\n"
-        f"👤 Імʼя: {name}\n"
-        f"📞 Телефон: {phone}\n"
-        f"🏙️ Місто: {city}\n"
-        f"🏬 Магазин: {store}\n"
-        f"🕓 Час: {ts}\n"
-        f"🆔 User: @{message.from_user.username or '—'} / {message.from_user.id}"
+    kb.add("✅ Так, підтверджую", "❌ Скасувати")
+    bot.send_message(
+        message.chat.id,
+        "🔐 *Крок 3/3*\nВи підтверджуєте передачу своїх контактних даних HR-відділу LC Waikiki?",
+        parse_mode="Markdown",
+        reply_markup=kb
     )
-    try:
-        bot.send_message(HR_CHAT_ID, hr_text, parse_mode="Markdown")
-    except Exception as e:
-        print("⚠️ Не надіслано в HR чат:", repr(e))
 
-    # Google Sheets
+@bot.message_handler(func=lambda m: m.text == "❌ Скасувати")
+def cancel(message):
+    STATE.pop(message.chat.id, None)
+    bot.send_message(message.chat.id, "❌ Заявку скасовано. Щоб почати заново — натисніть /start",
+                     reply_markup=types.ReplyKeyboardRemove())
+
+@bot.message_handler(func=lambda m: m.text == "✅ Так, підтверджую")
+def confirm(message):
+    data = STATE.get(message.chat.id, {})
+    if not data or "city" not in data:
+        return bot.send_message(message.chat.id, "Сесію не знайдено. Натисніть /start")
+
+    # Формуємо дані для Google Sheets (8 колонок)
+    # 1 Дата | 2 Місто | 3 ТЦ | 4 Адреса | 5 Корп. тел. | 6 ПІБ | 7 Телефон | 8 Telegram ID
+    date_str = datetime.datetime.now().strftime("%d.%m.%Y")
+    row = [
+        date_str,
+        data.get("city", ""),
+        data.get("mall", ""),
+        data.get("address", ""),
+        data.get("corp_phone", ""),
+        data.get("pib", ""),
+        data.get("phone", ""),
+        str(message.chat.id)
+    ]
+
+    # Пишемо у Google Sheets
     try:
         if worksheet:
-            worksheet.append_row([
-                datetime.datetime.now().isoformat(),
-                name, phone, city, store,
-                str(message.from_user.id),
-                f"@{message.from_user.username or ''}"
-            ], value_input_option="USER_ENTERED")
-            print("✅ Запис у Google Sheets виконано")
+            worksheet.append_row(row, value_input_option="USER_ENTERED")
+            print("✅ Запис у Google Sheets виконано:", row)
         else:
-            print("ℹ️ Google Sheets не ініціалізовано — пропуск запису.")
+            print("ℹ️ Google Sheets не ініціалізовано — пропуск запису. Row:", row)
     except Exception as e:
         print("⚠️ Помилка запису в Google Sheets:", repr(e))
 
-# -------- Адмін: /addstore --------
+    # Надсилаємо в HR
+    hr_msg = (
+        "🚀 <b>НОВА ЗАЯВКА НА РОБОТУ В LC WAIKIKI 🇺🇦</b>\n\n"
+        f"📍 <b>Місто:</b> {data.get('city','')}\n"
+        f"🏢 <b>ТЦ:</b> {data.get('mall','')}\n"
+        f"📫 <b>Адреса:</b> {data.get('address','')}\n"
+        f"☎️ <b>Корп. тел:</b> {data.get('corp_phone','')}\n"
+        f"👤 <b>ПІБ:</b> {data.get('pib','')}\n"
+        f"📞 <b>Телефон:</b> {data.get('phone','')}\n"
+        f"🆔 <b>Telegram ID:</b> {message.chat.id}\n"
+        f"📅 <b>Дата:</b> {date_str}"
+    )
+    try:
+        bot.send_message(HR_CHAT_ID, hr_msg, parse_mode="HTML")
+        print("✅ Повідомлення в HR-групу надіслано")
+    except Exception as e:
+        print("⚠️ Помилка надсилання в HR-групу:", repr(e), f"(HR_CHAT_ID={HR_CHAT_ID})")
+
+    bot.send_message(
+        message.chat.id,
+        "🎉 Дякуємо! Ваша заявка успішно відправлена HR-відділу 👏",
+        reply_markup=types.ReplyKeyboardRemove()
+    )
+    # Очистимо стан
+    STATE.pop(message.chat.id, None)
+
+# ------------------ /addstore (admins) ------------------
 @bot.message_handler(commands=["addstore"])
 def addstore(message):
     uid = message.from_user.id
@@ -258,7 +307,7 @@ def addstore(message):
     msg = bot.send_message(
         message.chat.id,
         "Введіть дані магазину у форматі:\n"
-        "`Місто|ТЦ|Телефон|Адреса`\n\n"
+        "`Місто|ТЦ|Корп.телефон|Адреса`\n\n"
         "Напр.: `Київ|Cosmo Multimoll|(067) 111-22-33|вул. Вадима Гетьмана, 6`",
         parse_mode="Markdown"
     )
@@ -268,34 +317,40 @@ def addstore_process(message):
     text = (message.text or "")
     parts = [p.strip() for p in text.split("|")]
     if len(parts) != 4:
-        return bot.send_message(message.chat.id, "Невірний формат. Спробуйте ще раз: `Місто|ТЦ|Телефон|Адреса`", parse_mode="Markdown")
-    city, mall, phone, addr = parts
-    if save_dynamic(city, mall, phone, addr):
+        return bot.send_message(
+            message.chat.id,
+            "Невірний формат. Приклад:\n`Київ|Cosmo Multimoll|(067) 111-22-33|вул. Вадима Гетьмана, 6`",
+            parse_mode="Markdown"
+        )
+    city, mall, corp_phone, address = parts
+    if save_dynamic(city, mall, corp_phone, address):
         bot.send_message(message.chat.id, "✅ Магазин додано. Новий список підхопиться автоматично.")
     else:
         bot.send_message(message.chat.id, "⚠️ Не вдалося додати магазин. Перевірте логи.")
 
-# --------------- Запуск (Polling) ---------------
-if __name__ == "__main__":
-    print("🚀 LC Waikiki HR Bot запущено (polling).")
-    # швидкий, стабільний polling
-    bot.infinity_polling(
-        timeout=30,                # таймаут з'єднання з Telegram
-        long_polling_timeout=20,   # довжина long-poll запиту
-        skip_pending=True          # пропустити застарілі апдейти
-    )
-import threading
-from flask import Flask
+# ------------------ Mini Flask (для Render Web Service) ------------------
 app = Flask(__name__)
 
-@app.route('/')
+@app.route("/")
 def home():
-    return "LC Waikiki HR Bot is running."
+    return "LC Waikiki HR Bot (polling) працює.", 200
 
 def run_polling():
-    bot.infinity_polling(timeout=30, long_polling_timeout=20, skip_pending=True)
+    print("🚀 LC Waikiki HR Bot запущено (polling).")
+    # Автоматично видалимо webhook, якщо раптом колись був виставлений
+    try:
+        import requests
+        requests.get(f"https://api.telegram.org/bot{BOT_TOKEN}/deleteWebhook", timeout=5)
+    except Exception:
+        pass
+
+    bot.infinity_polling(
+        timeout=30,
+        long_polling_timeout=20,
+        skip_pending=True
+    )
 
 if __name__ == "__main__":
-    threading.Thread(target=run_polling).start()
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
-
+    # Стартуємо polling у окремому потоці, Flask — для 'живого' порту Render
+    threading.Thread(target=run_polling, daemon=True).start()
+    app.run(host="0.0.0.0", port=PORT)
