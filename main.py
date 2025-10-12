@@ -1,4 +1,4 @@
-# LC Waikiki HR Bot 🇺🇦 — фінальний стабільний реліз
+# LC Waikiki HR Bot 🇺🇦 — фінальна Webhook-версія для Render
 # Автор: Денис + GPT-5 💙
 
 import os
@@ -7,15 +7,16 @@ import datetime
 import time
 import telebot
 from telebot import types
+from flask import Flask, request
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-import requests
 
 # ---------------------- CONFIG ----------------------
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 HR_CHAT_ID = int(os.getenv("HR_CHAT_ID", "-1003187426680"))
 SPREADSHEET_NAME = os.getenv("SPREADSHEET_NAME", "LCWAIKIKI_candidates")
 WORKSHEET_NAME = os.getenv("WORKSHEET_NAME", "work")
+WEBHOOK_URL = os.getenv("WEBHOOK_URL", f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME')}/webhook")
 
 if not BOT_TOKEN:
     raise RuntimeError("❌ BOT_TOKEN не знайдено в Environment Variables!")
@@ -27,11 +28,10 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 sheet = client.open(SPREADSHEET_NAME).worksheet(WORKSHEET_NAME)
 
-# ---------------------- STORE LIST ----------------------
+# ---------------------- LOAD STORES ----------------------
 with open("store_list.json", "r", encoding="utf-8") as f:
     stores = json.load(f)
 
-# Сортуємо міста за кількістю магазинів
 city_counts = {}
 for store in stores:
     city = store["Місто"]
@@ -40,6 +40,7 @@ sorted_cities = sorted(city_counts, key=city_counts.get, reverse=True)
 
 # ---------------------- BOT INIT ----------------------
 bot = telebot.TeleBot(BOT_TOKEN, parse_mode="HTML")
+app = Flask(__name__)
 user_data = {}
 
 # ---------------------- START ----------------------
@@ -50,8 +51,6 @@ def start(message):
     for city in sorted_cities:
         markup.add(types.KeyboardButton(f"🏙️ {city}"))
 
-    bot.send_chat_action(message.chat.id, "typing")
-    time.sleep(1)
     bot.send_message(
         message.chat.id,
         (
@@ -60,8 +59,7 @@ def start(message):
             "Давайте зробимо кілька простих кроків, щоб надіслати заявку 🧾"
         ),
     )
-
-    time.sleep(1)
+    time.sleep(0.8)
     bot.send_message(
         message.chat.id,
         "Будь ласка, оберіть місто, у якому бажаєте працювати 🏙️",
@@ -79,8 +77,6 @@ def choose_city(message):
     for store in malls:
         markup.add(types.KeyboardButton(f"🏬 {store['ТЦ']}"))
 
-    bot.send_chat_action(message.chat.id, "typing")
-    time.sleep(1)
     bot.send_message(
         message.chat.id,
         f"🏙️ <b>{city}</b>\n\nОберіть торговий центр, у якому бажаєте працювати 🏬",
@@ -97,8 +93,6 @@ def choose_mall(message):
         return
 
     user_data[message.chat.id].update(store)
-    bot.send_chat_action(message.chat.id, "typing")
-    time.sleep(1)
     bot.send_message(
         message.chat.id,
         "👤 Введіть, будь ласка, ваше <b>ПІБ</b> (повністю):",
@@ -114,8 +108,6 @@ def step_name(message):
         return bot.register_next_step_handler(message, step_name)
 
     user_data[message.chat.id]["name"] = name
-    bot.send_chat_action(message.chat.id, "typing")
-    time.sleep(1)
     bot.send_message(message.chat.id, "📞 Введіть ваш номер телефону (наприклад, +380XXXXXXXXX):")
     bot.register_next_step_handler(message, step_phone)
 
@@ -130,8 +122,6 @@ def step_phone(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
     markup.add("✅ Так, підтверджую", "❌ Скасувати")
 
-    bot.send_chat_action(message.chat.id, "typing")
-    time.sleep(1)
     bot.send_message(
         message.chat.id,
         (
@@ -180,8 +170,6 @@ def confirm(message):
 
     bot.send_message(HR_CHAT_ID, hr_text)
 
-    bot.send_chat_action(message.chat.id, "typing")
-    time.sleep(1.2)
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add("🔁 Подати ще одну заявку")
 
@@ -206,27 +194,28 @@ def cancel(message):
     user_data.pop(message.chat.id, None)
     bot.send_message(message.chat.id, "❌ Заявку скасовано. Щоб почати спочатку — натисніть /start")
 
-# ---------------------- RUN ----------------------
-def remove_old_webhook():
-    """Видаляє старий webhook перед запуском polling."""
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/deleteWebhook"
-    try:
-        response = requests.get(url)
-        if response.status_code == 200 and '"ok":true' in response.text:
-            print("✅ Старий webhook успішно видалено перед запуском polling.")
-        else:
-            print(f"⚠️ Не вдалося видалити webhook: {response.text}")
-    except Exception as e:
-        print(f"❌ Помилка при спробі видалити webhook: {e}")
+# ---------------------- FLASK ROUTES ----------------------
+@app.route("/", methods=["GET"])
+def index():
+    return "✅ LC Waikiki HR Bot працює через Webhook!"
 
-remove_old_webhook()
-time.sleep(3)
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    if request.headers.get("content-type") == "application/json":
+        json_str = request.get_data().decode("utf-8")
+        update = telebot.types.Update.de_json(json_str)
+        bot.process_new_updates([update])
+        return "OK", 200
+    return "Unsupported Media Type", 415
 
-print("🚀 LC Waikiki HR Bot запущено (polling, з анімацією).")
+# ---------------------- SET WEBHOOK ----------------------
+def set_webhook():
+    bot.remove_webhook()
+    time.sleep(1)
+    bot.set_webhook(url=WEBHOOK_URL)
+    print(f"✅ Webhook встановлено: {WEBHOOK_URL}")
 
-while True:
-    try:
-        bot.infinity_polling(timeout=30, long_polling_timeout=20, skip_pending=True)
-    except Exception as e:
-        print(f"⚠️ Помилка polling: {e}")
-        time.sleep(5)
+# ---------------------- MAIN ----------------------
+if __name__ == "__main__":
+    set_webhook()
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
