@@ -1,6 +1,6 @@
 # main.py
-# LC Waikiki HR Bot — Deluxe Edition (UA only)
-# ✅ Render + Gunicorn, ✅ Webhook, ✅ Google Sheets, ✅ Всі магазини в коді, ✅ /addstore для адміна
+# LC Waikiki HR Bot — FAST POLLING EDITION (UA only replies)
+# ✅ Без Flask/webhook (швидко), ✅ Google Sheets, ✅ Всі магазини в коді, ✅ /addstore (admins)
 
 import os
 import re
@@ -10,42 +10,44 @@ import datetime
 from collections import defaultdict
 from typing import List, Dict
 
-from flask import Flask, request
 import telebot
 from telebot import types
 
-# --------- CONFIG (env) ----------
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8328512172:AAEaOGMTWKZeIUZytbHLvaAIz1kSdA0NaVQ")
+# --------------- CONFIG (Env) ----------------
+BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
 HR_CHAT_ID = int(os.getenv("HR_CHAT_ID", "-1003187426680"))
 ADMIN_IDS = [int(x) for x in os.getenv("ADMIN_IDS", "").split(",") if x.strip().isdigit()]
-WEBHOOK_URL = os.getenv("WEBHOOK_URL", "https://telebot-4snj.onrender.com/webhook")
 
-SPREADSHEET_NAME = os.getenv("SPREADSHEET_NAME", "LCWAIKIKI_candidates")
-WORKSHEET_NAME = os.getenv("WORKSHEET_NAME", "work")
+SPREADSHEET_NAME = os.getenv("SPREADSHEET_NAME", "LCWAIKIKI_candidates").strip()
+WORKSHEET_NAME  = os.getenv("WORKSHEET_NAME", "work").strip()
 GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS", "").strip()
 
-# --------- Google Sheets client ----------
-gspread_client = None
+if not BOT_TOKEN:
+    raise RuntimeError("BOT_TOKEN не задано в Environment Variables!")
+
+# --------------- Google Sheets ----------------
 worksheet = None
 if GOOGLE_CREDENTIALS:
     try:
         import gspread
         from oauth2client.service_account import ServiceAccountCredentials
-
         creds_dict = json.loads(GOOGLE_CREDENTIALS)
-        scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+        scope = [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ]
         creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-        gspread_client = gspread.authorize(creds)
-        sh = gspread_client.open(SPREADSHEET_NAME)
-        worksheet = sh.worksheet(WORKSHEET_NAME)
-        print("✅ Google Sheets підключено:", SPREADSHEET_NAME, "/", WORKSHEET_NAME)
+        gclient = gspread.authorize(creds)
+        gsh = gclient.open(SPREADSHEET_NAME)
+        worksheet = gsh.worksheet(WORKSHEET_NAME)
+        print(f"✅ Google Sheets підключено: {SPREADSHEET_NAME}/{WORKSHEET_NAME}")
     except Exception as e:
+        worksheet = None
         print("⚠️ Не вдалося підключитись до Google Sheets:", repr(e))
 else:
     print("⚠️ GOOGLE_CREDENTIALS не задано — запис у таблицю буде пропущено.")
 
-# --------- Вбудований список магазинів (повний) ----------
-# Джерело: твій масив + додано Київ, ТРЦ Cosmo Multimoll (вул. Вадима Гетьмана, 6)
+# --------------- Магазини (повний список у коді) ---------------
 STORES: List[Dict[str, str]] = [
   {"ТЦ": "Ocean Plaza", "Місто": "Київ", "Телефон": "(067) 829-46-29", "Адреса": "вул.Антоновича,176,03150"},
   {"ТЦ": "Riviera", "Місто": "Одеса", "Телефон": "(067) 825-34-38", "Адреса": "село Фонтанка, Південна дорога,101А,65069"},
@@ -94,14 +96,13 @@ STORES: List[Dict[str, str]] = [
   {"ТЦ": "ТРЦ Майдан", "Місто": "Шептицький", "Телефон": "(063) 457 16 20", "Адреса": "вул. Героїв Майдану, 10, 80100"},
   {"ТЦ": "ТРЦ Комод", "Місто": "Київ", "Телефон": "(063) 457 16 19", "Адреса": "вул.Митрополита Андрія Шептицького, 4-А, 02002"},
   {"ТЦ": "ТРЦ Клас", "Місто": "Харків", "Телефон": "(063) 457 03 10", "Адреса": "вул. Дудинської, 1-А, 61064"},
-  # Доданий новий магазин Київ, ТРЦ Cosmo Multimoll, вул. Вадима Гетьмана, 6
-  {"ТЦ": "Cosmo Multimoll", "Місто": "Київ", "Телефон": "", "Адреса": "вул. Вадима Гетьмана, 6"},
+  {"ТЦ": "Cosmo Multimoll", "Місто": "Київ", "Телефон": "", "Адреса": "вул. Вадима Гетьмана, 6"}
 ]
 
-# Додаткові (динамічні) магазини, що додаються адміном через /addstore — збережемо в окремому файлі:
+# Додаткові (динамічні) магазини — /addstore
 DYNAMIC_FILE = "stores_dynamic.json"
 
-def load_dynamic_stores() -> List[Dict[str, str]]:
+def load_dynamic() -> List[Dict[str, str]]:
     try:
         if not os.path.exists(DYNAMIC_FILE):
             return []
@@ -112,12 +113,12 @@ def load_dynamic_stores() -> List[Dict[str, str]]:
         print("⚠️ Помилка читання stores_dynamic.json:", e)
         return []
 
-def save_dynamic_store(city: str, mall: str, phone: str, addr: str) -> bool:
-    data = load_dynamic_stores()
-    data.append({"ТЦ": mall, "Місто": city, "Телефон": phone, "Адреса": addr})
+def save_dynamic(city: str, mall: str, phone: str, addr: str) -> bool:
+    d = load_dynamic()
+    d.append({"ТЦ": mall, "Місто": city, "Телефон": phone, "Адреса": addr})
     try:
         with open(DYNAMIC_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+            json.dump(d, f, ensure_ascii=False, indent=2)
         print("✅ Додано динамічний магазин:", city, mall)
         return True
     except Exception as e:
@@ -125,40 +126,34 @@ def save_dynamic_store(city: str, mall: str, phone: str, addr: str) -> bool:
         return False
 
 def all_stores() -> List[Dict[str, str]]:
-    # злиємо вшиті + динамічні
-    return STORES + load_dynamic_stores()
+    return STORES + load_dynamic()
 
-# --- Формування структури міст/магазинів ---
 def store_label(s: Dict[str, str]) -> str:
     name = s.get("ТЦ", "").strip()
     addr = s.get("Адреса", "").strip()
     phone = s.get("Телефон", "").strip()
-    suffix = f" ☎️ {phone}" if phone else ""
-    return f"{name} — {addr}{suffix}"
+    return f"{name} — {addr}{(' ☎️ ' + phone) if phone else ''}"
 
 def group_by_city() -> Dict[str, List[str]]:
     city_map = defaultdict(list)
     stores = all_stores()
-    print(f"📦 Завантажено магазинів (разом): {len(stores)}")
+    print(f"📦 Магазинів (разом): {len(stores)}")
     for s in stores:
         city = (s.get("Місто") or "").strip() or "Інше"
         city_map[city].append(store_label(s))
     return city_map
 
-# ---------- Flask & TeleBot ----------
-app = Flask(__name__)
-bot = telebot.TeleBot(BOT_TOKEN, threaded=False)  # sync обробка — стабільно під Gunicorn
+# ---------- Bot init ----------
+bot = telebot.TeleBot(BOT_TOKEN, parse_mode=None, threaded=True, num_threads=4)
 
-# ---------- Валідація телефону (мʼяка) ----------
+# ---------- Helpers ----------
 PHONE_RE = re.compile(r"^\+?[\d\s\-\(\)]{9,20}$")
-
 def valid_phone(p: str) -> bool:
-    return bool(PHONE_RE.match(p.strip()))
+    return bool(PHONE_RE.match((p or "").strip()))
 
-# ---------- State flow ----------
+# ---------- Flow ----------
 @bot.message_handler(commands=["start"])
 def start(message):
-    # Вітання + підтвердження ПД
     text = (
         "👋 Вітаємо в *LC Waikiki HR Bot*!\n\n"
         "Щоб продовжити та надіслати свої контактні дані для HR, "
@@ -169,7 +164,7 @@ def start(message):
     bot.send_message(message.chat.id, text, parse_mode="Markdown", reply_markup=kb)
 
 @bot.callback_query_handler(func=lambda c: c.data == "consent_ok")
-def consent_ok(call):
+def on_consent(call):
     bot.answer_callback_query(call.id)
     msg = bot.send_message(call.message.chat.id, "📋 *Крок 1/5*\nВведіть, будь ласка, ваше *Ім'я та Прізвище*:", parse_mode="Markdown")
     bot.register_next_step_handler(msg, step_name)
@@ -177,31 +172,27 @@ def consent_ok(call):
 def step_name(message):
     name = (message.text or "").strip()
     if not name or len(name) < 3:
-        msg = bot.send_message(message.chat.id, "🙈 Імʼя вказано некоректно. Будь ласка, введіть *Ім'я та Прізвище* ще раз:", parse_mode="Markdown")
+        msg = bot.send_message(message.chat.id, "🙈 Імʼя виглядає некоректним. Введіть *Ім'я та Прізвище* ще раз:", parse_mode="Markdown")
         return bot.register_next_step_handler(msg, step_name)
-
     msg = bot.send_message(message.chat.id, "📞 *Крок 2/5*\nВведіть ваш *номер телефону* (наприклад, `+380XXXXXXXXX`):", parse_mode="Markdown")
     bot.register_next_step_handler(msg, step_phone, name)
 
 def step_phone(message, name):
     phone = (message.text or "").strip()
     if not valid_phone(phone):
-        msg = bot.send_message(message.chat.id, "📵 Номер виглядає некоректним. Введіть, будь ласка, *номер телефону* ще раз:", parse_mode="Markdown")
+        msg = bot.send_message(message.chat.id, "📵 Номер виглядає некоректним. Введіть *номер телефону* ще раз:", parse_mode="Markdown")
         return bot.register_next_step_handler(msg, step_phone, name)
 
-    # Підтягуємо/групуємо магазини
+    # Підготуємо міста одразу
     city_map = group_by_city()
     if not city_map:
         bot.send_message(message.chat.id, "⚠️ Наразі перелік магазинів порожній. Спробуйте пізніше.")
         return
 
-    # Міста за кількістю магазинів (спадаюче)
     cities_sorted = sorted(city_map.keys(), key=lambda c: len(city_map[c]), reverse=True)
-
     kb = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
     for c in cities_sorted:
         kb.add(types.KeyboardButton(c))
-
     msg = bot.send_message(message.chat.id, "🌆 *Крок 3/5*\nОберіть ваше *місто*:", parse_mode="Markdown", reply_markup=kb)
     bot.register_next_step_handler(msg, step_city, name, phone, city_map)
 
@@ -211,13 +202,11 @@ def step_city(message, name, phone, city_map):
         msg = bot.send_message(message.chat.id, "😬 Будь ласка, оберіть *місто* зі списку нижче:", parse_mode="Markdown")
         return bot.register_next_step_handler(msg, step_city, name, phone, city_map)
 
-    # Список магазинів у місті
     stores = city_map[city]
     kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
     for s in stores:
         label = s if len(s) <= 60 else s[:57] + "…"
         kb.add(types.KeyboardButton(label))
-
     msg = bot.send_message(message.chat.id, f"🏬 *Крок 4/5*\nОберіть *магазин* у місті _{city}_:", parse_mode="Markdown", reply_markup=kb)
     bot.register_next_step_handler(msg, step_store, name, phone, city)
 
@@ -227,14 +216,9 @@ def step_store(message, name, phone, city):
         msg = bot.send_message(message.chat.id, "Будь ласка, оберіть магазин зі списку нижче.")
         return bot.register_next_step_handler(msg, step_store, name, phone, city)
 
-    # Підтвердження → відправка HR → Google Sheets
     ts = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
-    confirm = (
-        "✅ *Крок 5/5*\nДякуємо! Ваша заявка прийнята 💙\n\n"
-        "Наша HR-команда звʼяжеться з вами найближчим часом."
-    )
-    bot.send_message(message.chat.id, confirm, parse_mode="Markdown", reply_markup=types.ReplyKeyboardRemove())
-
+    # Підтвердження користувачу
+    bot.send_message(message.chat.id, "✅ *Крок 5/5*\nДякуємо! Ваша заявка прийнята 💙\nНаша HR-команда звʼяжеться з вами найближчим часом.", parse_mode="Markdown", reply_markup=types.ReplyKeyboardRemove())
     # HR повідомлення
     hr_text = (
         "📩 *Нова заявка від кандидата*\n\n"
@@ -255,20 +239,17 @@ def step_store(message, name, phone, city):
         if worksheet:
             worksheet.append_row([
                 datetime.datetime.now().isoformat(),
-                name,
-                phone,
-                city,
-                store,
+                name, phone, city, store,
                 str(message.from_user.id),
                 f"@{message.from_user.username or ''}"
             ], value_input_option="USER_ENTERED")
             print("✅ Запис у Google Sheets виконано")
         else:
-            print("ℹ️ Google Sheets клієнт не ініціалізовано — пропускаємо запис.")
+            print("ℹ️ Google Sheets не ініціалізовано — пропуск запису.")
     except Exception as e:
         print("⚠️ Помилка запису в Google Sheets:", repr(e))
 
-# ---------- Адмін: /addstore ----------
+# -------- Адмін: /addstore --------
 @bot.message_handler(commands=["addstore"])
 def addstore(message):
     uid = message.from_user.id
@@ -289,40 +270,17 @@ def addstore_process(message):
     if len(parts) != 4:
         return bot.send_message(message.chat.id, "Невірний формат. Спробуйте ще раз: `Місто|ТЦ|Телефон|Адреса`", parse_mode="Markdown")
     city, mall, phone, addr = parts
-    ok = save_dynamic_store(city, mall, phone, addr)
-    if ok:
+    if save_dynamic(city, mall, phone, addr):
         bot.send_message(message.chat.id, "✅ Магазин додано. Новий список підхопиться автоматично.")
     else:
         bot.send_message(message.chat.id, "⚠️ Не вдалося додати магазин. Перевірте логи.")
 
-# ---------- Flask routes ----------
-@app.route("/", methods=["GET"])
-def index():
-    return "✅ LC Waikiki HR Bot online", 200
-
-@app.route("/webhook", methods=["GET", "POST"])
-def webhook():
-    if request.method == "GET":
-        return "✅ LC Waikiki HR Bot працює", 200
-    try:
-        raw = request.data.decode("utf-8")
-        update = telebot.types.Update.de_json(raw)
-        bot.process_new_updates([update])  # sync — стабільно під Gunicorn
-        return "OK", 200
-    except Exception as e:
-        print("⚠️ Webhook processing error:", repr(e))
-        return "Error", 500
-
-# ---------- Webhook setup ----------
-try:
-    bot.remove_webhook()
-    time.sleep(0.5)
-    bot.set_webhook(url=WEBHOOK_URL)
-    print("✅ Webhook встановлено:", WEBHOOK_URL)
-except Exception as e:
-    print("⚠️ Не вдалося встановити webhook:", repr(e))
-
-# ---------- Local run (debug) ----------
+# --------------- Запуск (Polling) ---------------
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    print("🚀 LC Waikiki HR Bot запущено (polling).")
+    # швидкий, стабільний polling
+    bot.infinity_polling(
+        timeout=30,                # таймаут з'єднання з Telegram
+        long_polling_timeout=20,   # довжина long-poll запиту
+        skip_pending=True          # пропустити застарілі апдейти
+    )
