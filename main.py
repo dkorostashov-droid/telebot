@@ -265,15 +265,15 @@ def on_phone(message: types.Message):
     kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(types.KeyboardButton("✅ Так, підтверджую"), types.KeyboardButton("❌ Скасувати"))
 
-    bot.send_message(
-        chat_id,
-        (
-            "🔒 Ви підтверджуєте передачу своїх контактних даних HR-відділу LC Waikiki?\n\n"
-            "⚖️ Натискаючи «Так, підтверджую», ви погоджуєтесь на обробку персональних даних "
-            "відповідно до Закону України «Про захист персональних даних»."
-        ),
-        reply_markup=kb
-    )
+bot.send_message(
+    chat_id,
+    (
+        "📄 Відправляючи своє резюме, ви автоматично погоджуєтеся із документом за посиланням:\n"
+        "https://lcwonline-my.sharepoint.com/:w:/g/personal/marta_litvin_lcwaikiki_com/IQBRLgT2CebERLICeunXyLlEAfXHeBIKZuRetiW8yF_pgm0?rtime=S8Lfqckj3kg\n\n"
+        "🔒 Ви підтверджуєте передачу своїх контактних даних HR-відділу LC Waikiki?"
+    ),
+    reply_markup=kb
+)
 
 
 @bot.message_handler(func=lambda m: m.text == "✅ Так, підтверджую")
@@ -375,5 +375,6 @@ if __name__ == "__main__":
     set_webhook()
     port = int(os.getenv("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+
 
 
