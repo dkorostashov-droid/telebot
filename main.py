@@ -249,7 +249,6 @@ def on_name(message: types.Message):
     bot.send_message(chat_id, "📞 Введіть ваш номер телефону (наприклад, +380XXXXXXXXX):")
     bot.register_next_step_handler(message, on_phone)
 
-
 def on_phone(message: types.Message):
     chat_id = message.chat.id
     phone = (message.text or "").strip()
@@ -265,15 +264,15 @@ def on_phone(message: types.Message):
     kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(types.KeyboardButton("✅ Так, підтверджую"), types.KeyboardButton("❌ Скасувати"))
 
-bot.send_message(
-    chat_id,
-    (
-        "📄 Відправляючи своє резюме, ви автоматично погоджуєтеся із документом за посиланням:\n"
-        "https://lcwonline-my.sharepoint.com/:w:/g/personal/marta_litvin_lcwaikiki_com/IQBRLgT2CebERLICeunXyLlEAfXHeBIKZuRetiW8yF_pgm0?rtime=S8Lfqckj3kg\n\n"
-        "🔒 Ви підтверджуєте передачу своїх контактних даних HR-відділу LC Waikiki?"
-    ),
-    reply_markup=kb
-)
+    bot.send_message(  # ← ДОДАВ ВІДСТУП - тепер це частина функції!
+        chat_id,
+        (
+            "📄 Відправляючи своє резюме, ви автоматично погоджуєтеся із документом за посиланням:\n"
+            "https://lcwonline-my.sharepoint.com/:w:/g/personal/marta_litvin_lcwaikiki_com/IQBRLgT2CebERLICeunXyLlEAfXHeBIKZuRetiW8yF_pgm0?rtime=S8Lfqckj3kg\n\n"
+            "🔒 Ви підтверджуєте передачу своїх контактних даних HR-відділу LC Waikiki?"
+        ),
+        reply_markup=kb
+    )
 
 
 @bot.message_handler(func=lambda m: m.text == "✅ Так, підтверджую")
@@ -375,6 +374,7 @@ if __name__ == "__main__":
     set_webhook()
     port = int(os.getenv("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+
 
 
 
