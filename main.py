@@ -406,19 +406,6 @@ response_text = (
 )
 bot.send_message(chat_id, response_text, parse_mode="HTML", reply_markup=types.ReplyKeyboardRemove())
 
-    user_data.pop(chat_id, None)
-
-
-@bot.message_handler(func=lambda m: m.text == "🔁 Подати ще одну заявку")
-def on_restart(message: types.Message):
-    on_start(message)
-
-
-@bot.message_handler(func=lambda m: m.text == "❌ Скасувати")
-def on_cancel(message: types.Message):
-    user_data.pop(message.chat.id, None)
-    bot.send_message(message.chat.id, "❌ Заявку скасовано. Щоб почати спочатку — натисніть /start",
-                     reply_markup=types.ReplyKeyboardRemove())
 
 
 # ---------------------- FLASK ROUTES ----------------------
@@ -449,4 +436,5 @@ if __name__ == "__main__":
     set_webhook()
     port = int(os.getenv("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+
 
