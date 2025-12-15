@@ -11,3 +11,4 @@ gspread==6.1.2
 # Базові залежності Python
 requests==2.32.3
 gunicorn==22.0.0
+requests==2.31.0
