@@ -396,17 +396,17 @@ def on_confirm(message: types.Message):
     try:
         bot.send_message(HR_CHAT_ID, hr_text, parse_mode="HTML")
     except Exception as e:
-        # Якщо HR-чат недоступний — не валимо користувацький флоу
         bot.send_message(chat_id, "⚠️ Неможливо надіслати в HR-чат, але заявка збережена.", parse_mode="HTML")
 
-# Проста відповідь користувачу без клавіатури
-response_text = (
-    "🎉 <b>Дякуємо!</b>\n"
-    "Ваша заявка передана. Очікуйте на відповідь найближчим часом 💬"
-)
-bot.send_message(chat_id, response_text, parse_mode="HTML", reply_markup=types.ReplyKeyboardRemove())
-
-
+    # === ВІДПОВІДЬ КОРИСТУВАЧУ (ОНОВЛЕНА ВЕРСІЯ) ===
+    # Проста відповідь користувачу без клавіатури
+    response_text = (
+        "🎉 <b>Дякуємо!</b>\n"
+        "Ваша заявка передана. Очікуйте на відповідь найближчим часом 💬"
+    )
+    bot.send_message(chat_id, response_text, parse_mode="HTML", reply_markup=types.ReplyKeyboardRemove())
+    
+    user_data.pop(chat_id, None)  # Очищаємо дані користувача
 
 # ---------------------- FLASK ROUTES ----------------------
 @app.route("/", methods=["GET"])
@@ -436,5 +436,6 @@ if __name__ == "__main__":
     set_webhook()
     port = int(os.getenv("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+
 
 
