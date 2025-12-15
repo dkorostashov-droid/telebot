@@ -1,5 +1,4 @@
-# LC Waikiki HR Bot 🇺🇦 — фінальна Webhook-версія для Render
-# Автор: Денис + GPT-5 💙
+# LC Waikiki HR Bot 🇺🇦 — Webhook-версія для Render з підтримкою Google Sheets та Airtable
 
 import os
 import json
@@ -12,7 +11,7 @@ from flask import Flask, request
 
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-
+import requests  # Для Airtable
 
 # ---------------------- CONFIG ----------------------
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -44,7 +43,7 @@ if not WEBHOOK_URL:
         "https://telebot-4snj.onrender.com/webhook"
     )
 
-# ---------------------- GOOGLE SHEETS (2 способи) ----------------------
+# ---------------------- GOOGLE SHEETS ----------------------
 def _gsheet_client():
     """
     Підключення до Google Sheets:
@@ -77,6 +76,57 @@ def _gsheet_client():
 _client = _gsheet_client()
 _sheet = _client.open(SPREADSHEET_NAME).worksheet(WORKSHEET_NAME)
 
+# ---------------------- AIRTABLE ----------------------
+def save_to_airtable(candidate_data):
+    """
+    Записує дані кандидата в Airtable.
+    candidate_data: словник з даними кандидата
+    Повертає True при успіху, False при помилці.
+    """
+    # Отримуємо конфігурацію з змінних середовища
+    api_key = os.getenv("AIRTABLE_TOKEN")
+    base_id = os.getenv("AIRTABLE_BASE_ID")
+    table_name = os.getenv("AIRTABLE_TABLE_NAME", "Table 1")
+    
+    # Перевіряємо, чи всі змінні налаштовані
+    if not api_key or not base_id:
+        print("⚠️ Airtable не налаштовано: відсутній AIRTABLE_TOKEN або AIRTABLE_BASE_ID")
+        return False
+    
+    # Формуємо URL та заголовки для запиту
+    url = f"https://api.airtable.com/v0/{base_id}/{table_name}"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    
+    # Форматуємо дані для Airtable
+    payload = {
+        "fields": {
+            "Дата": candidate_data.get('Дата', ''),
+            "Місто": candidate_data.get('Місто', ''),
+            "ТЦ": candidate_data.get('ТЦ', ''),
+            "Адреса": candidate_data.get('Адреса', ''),
+            "Корпоративний тел.": candidate_data.get('Корпоративний тел.', ''),
+            "ПІБ": candidate_data.get('ПІБ', ''),
+            "Телефон": candidate_data.get('Телефон', ''),
+            "Telegram ID": candidate_data.get('Telegram ID', ''),
+            "Статус": "Нова"  # Статус за замовчуванням
+        }
+    }
+    
+    try:
+        # Робимо POST-запит до API Airtable
+        response = requests.post(url, headers=headers, json=payload, timeout=10)
+        response.raise_for_status()  # Перевіряємо HTTP помилки
+        print(f"✅ Дані записано в Airtable: {candidate_data.get('ПІБ', '')}")
+        return True
+    except requests.exceptions.RequestException as e:
+        # Логуємо помилку для налагодження
+        print(f"❌ Помилка запису в Airtable: {e}")
+        if hasattr(e, 'response') and e.response is not None:
+            print(f"Відповідь сервера Airtable: {e.response.text}")
+        return False
 
 # ---------------------- ДАНІ МАГАЗИНІВ ----------------------
 STORES: List[dict] = [
@@ -129,7 +179,7 @@ STORES: List[dict] = [
     {"ТЦ": "Kiev Mall", "Місто": "Полтава", "Телефон": "(067) 446-89-80", "Адреса": "вул. Зіньківська, 6/1А"},
     {"ТЦ": "ТРЦ Київ", "Місто": "Суми", "Телефон": "(067) 658-63-29", "Адреса": "вул.Кооперативна 1"},
     {"ТЦ": "ЦУМ", "Місто": "Кам'янське", "Телефон": "(067) 232-44-50", "Адреса": "просп.Тараса Шевченка 9"},
-    {"ТЦ": "ТРЦ  Дастор", "Місто": "Ужгород", "Телефон": "(067) 244-70-85", "Адреса": "вул.Собранецька, 89"},
+    {"ТЦ": "ТРЦ Дастор", "Місто": "Ужгород", "Телефон": "(067) 244-70-85", "Адреса": "вул.Собранецька, 89"},
     {"ТЦ": "ТРЦ Депот", "Місто": "Кропивницький", "Телефон": "(063) 457 16 30", "Адреса": "вул. Велика Перспективна, 48"},
     {"ТЦ": "ТРЦ Майдан", "Місто": "Шептицький", "Телефон": "(063) 457 16 20", "Адреса": "вул. Героїв Майдану, 10"},
     {"ТЦ": "Retail Park", "Місто": "Мукачево", "Телефон": "", "Адреса": "вул. Лавківська, 1Д"},
@@ -285,20 +335,46 @@ def on_confirm(message: types.Message):
         bot.send_message(chat_id, "⚠️ Сталася помилка. Спробуйте ще раз /start")
         return
 
-    # Підготовка рядка для Google Sheets
-    # Порядок колонок: Дата | Місто | ТЦ | Адреса | Корпоративний тел. | ПІБ | Телефон | Telegram ID
+    # Підготовка даних кандидата
     today = datetime.now().strftime("%d.%m.%Y")
-    row = [
-        today,
-        data.get("Місто", ""),
-        data.get("ТЦ", ""),
-        data.get("Адреса", ""),
-        data.get("Телефон", ""),
-        data.get("ПІБ", ""),
-        data.get("Номер", ""),
-        str(message.from_user.id),
-    ]
-    _sheet.append_row(row, value_input_option="RAW")
+    candidate_data = {
+        'Дата': today,
+        'Місто': data.get("Місто", ""),
+        'ТЦ': data.get("ТЦ", ""),
+        'Адреса': data.get("Адреса", ""),
+        'Корпоративний тел.': data.get("Телефон", ""),
+        'ПІБ': data.get("ПІБ", ""),
+        'Телефон': data.get("Номер", ""),
+        'Telegram ID': str(message.from_user.id),
+    }
+    
+    # ---- ПАРАЛЕЛЬНИЙ ЗАПИС У ВСІ СИСТЕМИ ----
+    results = {'google_sheets': False, 'airtable': False}
+    
+    # 1. Запис у Google Sheets (старий код)
+    try:
+        row = [
+            candidate_data['Дата'],
+            candidate_data['Місто'],
+            candidate_data['ТЦ'],
+            candidate_data['Адреса'],
+            candidate_data['Корпоративний тел.'],
+            candidate_data['ПІБ'],
+            candidate_data['Телефон'],
+            candidate_data['Telegram ID']
+        ]
+        _sheet.append_row(row, value_input_option="RAW")
+        results['google_sheets'] = True
+        print(f"✅ Дані записано в Google Sheets: {candidate_data['ПІБ']}")
+    except Exception as e:
+        print(f"❌ Помилка запису в Google Sheets: {e}")
+    
+    # 2. Запис у Airtable (новий код)
+    results['airtable'] = save_to_airtable(candidate_data)
+    
+    # Логування результатів
+    print(f"📊 Результати запису: Google Sheets={'✅' if results['google_sheets'] else '❌'}, "
+          f"Airtable={'✅' if results['airtable'] else '❌'}")
 
     # Повідомлення HR
     hr_text = (
@@ -312,6 +388,9 @@ def on_confirm(message: types.Message):
         f"📞 <b>Телефон:</b> {data.get('Номер','')}\n"
         f"🆔 <b>Telegram ID:</b> {message.from_user.id}\n"
         f"📅 <b>Дата:</b> {today}\n"
+        f"💾 <b>Збережено в:</b> "
+        f"Google Sheets {'✅' if results['google_sheets'] else '❌'}, "
+        f"Airtable {'✅' if results['airtable'] else '❌'}\n"
         "━━━━━━━━━━━━━━━━━━━━━━"
     )
     try:
@@ -324,11 +403,23 @@ def on_confirm(message: types.Message):
     kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(types.KeyboardButton("🔁 Подати ще одну заявку"))
 
+    # Визначаємо успішність збереження
+    success_count = sum([1 for v in results.values() if v])
+    if success_count > 0:
+        response_text = (
+            f"🎉 <b>Дякуємо! Ваша заявка #{message.from_user.id}</b>\n"
+            f"Успішно передана ({success_count}/2 систем).\n"
+            "Очікуйте на відповідь найближчим часом 💬"
+        )
+    else:
+        response_text = (
+            "⚠️ <b>Заявку передано HR, але виникли технічні проблеми.</b>\n"
+            "З вами обов'язково зв'яжуться!"
+        )
+    
     bot.send_message(
         chat_id,
-        "🎉 <b>Дякуємо!</b>\n"
-        "Ваша заявка успішно передана HR-відділу LC Waikiki 👩‍💼\n"
-        "Очікуйте на відповідь найближчим часом 💬",
+        response_text,
         reply_markup=kb,
         parse_mode="HTML"
     )
@@ -376,8 +467,3 @@ if __name__ == "__main__":
     set_webhook()
     port = int(os.getenv("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
-
-
-
-
-
