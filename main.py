@@ -86,7 +86,7 @@ def save_to_airtable(candidate_data):
     # Отримуємо конфігурацію з змінних середовища
     api_key = os.getenv("AIRTABLE_TOKEN")
     base_id = os.getenv("AIRTABLE_BASE_ID")
-    table_name = os.getenv("AIRTABLE_TABLE_NAME", "Table 1")
+    table_name = os.getenv("AIRTABLE_TABLE_NAME", "LCWAIKIKI_candidates")
     
     # Перевіряємо, чи всі змінні налаштовані
     if not api_key or not base_id:
@@ -436,6 +436,7 @@ if __name__ == "__main__":
     set_webhook()
     port = int(os.getenv("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+
 
 
 
