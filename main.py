@@ -1,8 +1,11 @@
 # LC Waikiki HR Bot 🇺🇦 — Webhook-версія для Render з підтримкою Google Sheets
+# v2.1 — таймаут сесій, кнопка HR «Написати кандидату», прогрес-бар, покращений UX
 
 import os
 import re
 import json
+import time
+import threading
 from datetime import datetime
 from typing import List
 
@@ -39,6 +42,9 @@ if not WEBHOOK_URL:
         "❌ WEBHOOK_URL не задано і RENDER_EXTERNAL_HOSTNAME відсутній. "
         "Вкажіть WEBHOOK_URL вручну у Environment Variables."
     )
+
+# Таймаут сесії (секунди). 30 хвилин бездіяльності — сесія скидається.
+SESSION_TIMEOUT = 30 * 60
 
 # ─────────────────────── GOOGLE SHEETS ────────────────────────
 def _gsheet_client():
@@ -119,7 +125,6 @@ STORES: List[dict] = [
     {"ТЦ": "ТРЦ Депот",          "Місто": "Кропивницький",    "Телефон": "(063) 457 16 30", "Адреса": "вул. Велика Перспективна, 48"},
     {"ТЦ": "ТРЦ Майдан",         "Місто": "Шептицький",       "Телефон": "(063) 457 16 20", "Адреса": "вул. Героїв Майдану, 10"},
     {"ТЦ": "Retail Park",        "Місто": "Мукачево",         "Телефон": "",               "Адреса": "вул. Лавківська, 1Д"},
-    # ── Нові магазини ──
     {"ТЦ": "ТРЦ Аеромолл",       "Місто": "Бориспіль",        "Телефон": "",               "Адреса": "вулиця Київський шлях, 2/6"},
     {"ТЦ": "ТРЦ Гермес",         "Місто": "Біла Церква",      "Телефон": "",               "Адреса": "вул. Ярослава Мудрого, 40"},
 ]
@@ -138,13 +143,28 @@ for s in STORES:
 SORTED_CITIES = sorted(city_counts.keys(), key=lambda c: city_counts[c], reverse=True)
 
 # ─────────────────────────── СТАН ─────────────────────────────
-# Кроки анкети
 STEP_CITY     = "city"
 STEP_MALL     = "mall"
 STEP_POSITION = "position"
 STEP_NAME     = "name"
 STEP_PHONE    = "phone"
 STEP_CONFIRM  = "confirm"
+
+# ── Прогрес-бар ──────────────────────────────────────────────
+STEP_PROGRESS = {
+    STEP_CITY:     (1, 5),
+    STEP_MALL:     (2, 5),
+    STEP_POSITION: (3, 5),
+    STEP_NAME:     (4, 5),
+    STEP_PHONE:    (5, 5),
+    STEP_CONFIRM:  (5, 5),
+}
+
+def progress_bar(step: str) -> str:
+    current, total = STEP_PROGRESS.get(step, (1, 5))
+    filled = "▓" * current
+    empty  = "▒" * (total - current)
+    return f"{filled}{empty} Крок {current} з {total}"
 
 # ─────────────────────────── ХЕЛПЕРИ ──────────────────────────
 def chunk_buttons(items: List[str], width: int) -> List[List[types.KeyboardButton]]:
@@ -174,11 +194,50 @@ def get_first_name(full_name: str) -> str:
     return parts[1] if len(parts) >= 2 else parts[0]
 
 
+def touch_session(chat_id: int):
+    """Оновлює мітку часу останньої активності."""
+    if chat_id in user_data:
+        user_data[chat_id]["_last_active"] = time.time()
+
+
+def is_session_expired(chat_id: int) -> bool:
+    """Перевіряє чи минув таймаут сесії."""
+    data = user_data.get(chat_id)
+    if not data:
+        return False
+    last = data.get("_last_active", time.time())
+    return (time.time() - last) > SESSION_TIMEOUT
+
+
+# ─────────────── ФОНОВА ОЧИСТКА СЕСІЙ ─────────────────────────
+def _session_cleaner():
+    """Фоновий потік: кожні 5 хвилин видаляє прострочені сесії."""
+    while True:
+        time.sleep(5 * 60)
+        expired = [cid for cid in list(user_data) if is_session_expired(cid)]
+        for cid in expired:
+            try:
+                bot.send_message(
+                    cid,
+                    "⏳ <b>Сесію завершено через бездіяльність.</b>\n\n"
+                    "Натисніть /start, щоб розпочати знову.",
+                    reply_markup=types.ReplyKeyboardRemove(),
+                )
+            except Exception:
+                pass
+            user_data.pop(cid, None)
+            print(f"🗑️ Сесію {cid} видалено (таймаут)")
+
+
 # ─────────────────────────── BOT & FLASK ──────────────────────
 bot = telebot.TeleBot(BOT_TOKEN, parse_mode="HTML")
 app = Flask(__name__)
 
 user_data = {}   # chat_id -> dict зі станом та даними
+
+# Запускаємо фоновий потік очищення
+_cleaner_thread = threading.Thread(target=_session_cleaner, daemon=True)
+_cleaner_thread.start()
 
 
 # ─────────────────────────── КЛАВІАТУРИ ───────────────────────
@@ -224,13 +283,14 @@ def kb_confirm() -> types.ReplyKeyboardMarkup:
 @bot.message_handler(commands=["start", "cancel"])
 def on_start(message: types.Message):
     chat_id = message.chat.id
-    user_data[chat_id] = {"step": STEP_CITY}
+    user_data[chat_id] = {"step": STEP_CITY, "_last_active": time.time()}
     bot.send_message(
         chat_id,
         (
             "👋 <b>Вітаємо у LC Waikiki!</b>\n\n"
             "Ми раді, що ви зацікавлені у роботі з нами 💙\n\n"
-            "📍 <b>Крок 1 з 5.</b> Оберіть місто:"
+            f"<code>{progress_bar(STEP_CITY)}</code>\n\n"
+            "📍 Оберіть місто:"
         ),
         reply_markup=kb_cities(),
     )
@@ -240,13 +300,18 @@ def on_start(message: types.Message):
 @bot.message_handler(func=lambda m: m.text == "🔙 Назад")
 def on_back(message: types.Message):
     chat_id = message.chat.id
+
+    if is_session_expired(chat_id):
+        return _send_session_expired(chat_id)
+
+    touch_session(chat_id)
     step = user_data.get(chat_id, {}).get("step", STEP_CITY)
 
     if step == STEP_MALL:
         user_data[chat_id]["step"] = STEP_CITY
         bot.send_message(
             chat_id,
-            "📍 <b>Крок 1 з 5.</b> Оберіть місто:",
+            f"<code>{progress_bar(STEP_CITY)}</code>\n\n📍 Оберіть місто:",
             reply_markup=kb_cities(),
         )
     elif step == STEP_POSITION:
@@ -254,21 +319,21 @@ def on_back(message: types.Message):
         user_data[chat_id]["step"] = STEP_MALL
         bot.send_message(
             chat_id,
-            f"🏙️ <b>{city}</b>\n\n📍 <b>Крок 2 з 5.</b> Оберіть торговий центр:",
+            f"<code>{progress_bar(STEP_MALL)}</code>\n\n🏙️ <b>{city}</b>\n\n📍 Оберіть торговий центр:",
             reply_markup=kb_malls(city),
         )
     elif step == STEP_NAME:
         user_data[chat_id]["step"] = STEP_POSITION
         bot.send_message(
             chat_id,
-            "📍 <b>Крок 3 з 5.</b> Оберіть бажану посаду:",
+            f"<code>{progress_bar(STEP_POSITION)}</code>\n\n📍 Оберіть бажану посаду:",
             reply_markup=kb_positions(),
         )
     elif step in (STEP_PHONE, STEP_CONFIRM):
         user_data[chat_id]["step"] = STEP_NAME
         bot.send_message(
             chat_id,
-            "📍 <b>Крок 4 з 5.</b> Введіть ваше <b>ПІБ</b> (повністю):",
+            f"<code>{progress_bar(STEP_NAME)}</code>\n\n📍 Введіть ваше <b>ПІБ</b> (повністю):",
             reply_markup=types.ReplyKeyboardRemove(),
         )
         bot.register_next_step_handler(message, on_name)
@@ -280,6 +345,11 @@ def on_back(message: types.Message):
 @bot.message_handler(func=lambda m: m.text and m.text.startswith("🏙️ "))
 def on_choose_city(message: types.Message):
     chat_id = message.chat.id
+
+    if is_session_expired(chat_id):
+        return _send_session_expired(chat_id)
+
+    touch_session(chat_id)
     city = message.text.replace("🏙️", "").strip()
 
     if city not in city_counts:
@@ -289,7 +359,7 @@ def on_choose_city(message: types.Message):
     user_data.setdefault(chat_id, {}).update({"Місто": city, "step": STEP_MALL})
     bot.send_message(
         chat_id,
-        f"🏙️ <b>{city}</b>\n\n📍 <b>Крок 2 з 5.</b> Оберіть торговий центр:",
+        f"<code>{progress_bar(STEP_MALL)}</code>\n\n🏙️ <b>{city}</b>\n\n📍 Оберіть торговий центр:",
         reply_markup=kb_malls(city),
     )
 
@@ -298,6 +368,11 @@ def on_choose_city(message: types.Message):
 @bot.message_handler(func=lambda m: m.text and m.text.startswith("🏬 "))
 def on_choose_mall(message: types.Message):
     chat_id = message.chat.id
+
+    if is_session_expired(chat_id):
+        return _send_session_expired(chat_id)
+
+    touch_session(chat_id)
     mall_name = message.text.replace("🏬", "").strip()
 
     city = user_data.get(chat_id, {}).get("Місто", "")
@@ -309,7 +384,7 @@ def on_choose_mall(message: types.Message):
     user_data.setdefault(chat_id, {}).update({**store, "step": STEP_POSITION})
     bot.send_message(
         chat_id,
-        "📍 <b>Крок 3 з 5.</b> Оберіть бажану посаду:",
+        f"<code>{progress_bar(STEP_POSITION)}</code>\n\n📍 Оберіть бажану посаду:",
         reply_markup=kb_positions(),
     )
 
@@ -318,14 +393,22 @@ def on_choose_mall(message: types.Message):
 @bot.message_handler(func=lambda m: m.text and any(m.text == p for p in POSITIONS))
 def on_choose_position(message: types.Message):
     chat_id = message.chat.id
+
+    if is_session_expired(chat_id):
+        return _send_session_expired(chat_id)
+
+    touch_session(chat_id)
     position = message.text.strip()
-    # Зберігаємо без емодзі для читабельності в таблиці
     clean_position = re.sub(r"^[^\w]+", "", position).strip()
     user_data.setdefault(chat_id, {}).update({"Посада": clean_position, "step": STEP_NAME})
 
     bot.send_message(
         chat_id,
-        "📍 <b>Крок 4 з 5.</b> Введіть ваше <b>ПІБ</b> (повністю):",
+        (
+            f"<code>{progress_bar(STEP_NAME)}</code>\n\n"
+            "📍 Введіть ваше <b>ПІБ</b> (повністю):\n"
+            "<i>Наприклад: Іваненко Іван Петрович</i>"
+        ),
         reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(back_button()),
     )
     bot.register_next_step_handler(message, on_name)
@@ -338,6 +421,10 @@ def on_name(message: types.Message):
     if message.text == "🔙 Назад":
         return on_back(message)
 
+    if is_session_expired(chat_id):
+        return _send_session_expired(chat_id)
+
+    touch_session(chat_id)
     name = (message.text or "").strip()
     if len(name.split()) < 2:
         bot.send_message(
@@ -349,7 +436,11 @@ def on_name(message: types.Message):
     user_data.setdefault(chat_id, {}).update({"ПІБ": name, "step": STEP_PHONE})
     bot.send_message(
         chat_id,
-        "📍 <b>Крок 5 з 5.</b> Введіть номер телефону:\n<i>Наприклад: +380671234567</i>",
+        (
+            f"<code>{progress_bar(STEP_PHONE)}</code>\n\n"
+            "📍 Введіть номер телефону:\n"
+            "<i>Наприклад: +380671234567</i>"
+        ),
     )
     bot.register_next_step_handler(message, on_phone)
 
@@ -361,6 +452,10 @@ def on_phone(message: types.Message):
     if message.text == "🔙 Назад":
         return on_back(message)
 
+    if is_session_expired(chat_id):
+        return _send_session_expired(chat_id)
+
+    touch_session(chat_id)
     phone = (message.text or "").strip()
     if not is_valid_phone(phone):
         bot.send_message(
@@ -372,16 +467,19 @@ def on_phone(message: types.Message):
     user_data.setdefault(chat_id, {}).update({"user_phone": phone, "step": STEP_CONFIRM})
 
     data = user_data[chat_id]
+
+    # ── Покращений екран підтвердження (пункт 7) ──
     summary = (
-        "📋 <b>Перевірте ваші дані:</b>\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        f"🏙️ <b>Місто:</b> {data.get('Місто', '')}\n"
-        f"🏬 <b>ТЦ:</b> {data.get('ТЦ', '')}\n"
-        f"💼 <b>Посада:</b> {data.get('Посада', '')}\n"
-        f"👤 <b>ПІБ:</b> {data.get('ПІБ', '')}\n"
-        f"📞 <b>Телефон:</b> {phone}\n"
-        "━━━━━━━━━━━━━━━━━━━━\n\n"
-        "Все вірно?"
+        "📋 <b>Перевірте ваші дані перед відправкою:</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"🏙️  <b>Місто:</b>    {data.get('Місто', '')}\n"
+        f"🏬  <b>Магазин:</b>  {data.get('ТЦ', '')}\n"
+        f"💼  <b>Посада:</b>   {data.get('Посада', '')}\n"
+        f"👤  <b>ПІБ:</b>      {data.get('ПІБ', '')}\n"
+        f"📞  <b>Телефон:</b>  {phone}\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "Все вірно? Натисніть <b>«Підтверджую»</b> або поверніться "
+        "назад, щоб виправити."
     )
     bot.send_message(chat_id, summary, reply_markup=kb_confirm())
 
@@ -392,18 +490,20 @@ def on_edit(message: types.Message):
     on_start(message)
 
 
-# ── Підтвердження та збереження ──
+# ── Підтвердження — запит на GDPR ──
 @bot.message_handler(func=lambda m: m.text == "✅ Підтверджую")
 def on_confirm(message: types.Message):
     chat_id = message.chat.id
+
+    if is_session_expired(chat_id):
+        return _send_session_expired(chat_id)
+
+    touch_session(chat_id)
     data = user_data.get(chat_id)
     if not data:
         bot.send_message(chat_id, "⚠️ Сталася помилка. Спробуйте ще раз /start")
         return
 
-    today = datetime.now().strftime("%d.%m.%Y %H:%M")
-
-    # ── Погодження на обробку даних ──
     kb_gdpr = types.ReplyKeyboardMarkup(resize_keyboard=True)
     kb_gdpr.row(
         types.KeyboardButton("🔒 Погоджуюсь"),
@@ -423,9 +523,14 @@ def on_confirm(message: types.Message):
     )
 
 
+# ── GDPR прийнято — зберігаємо заявку ──
 @bot.message_handler(func=lambda m: m.text == "🔒 Погоджуюсь")
 def on_gdpr_accept(message: types.Message):
     chat_id = message.chat.id
+
+    if is_session_expired(chat_id):
+        return _send_session_expired(chat_id)
+
     data = user_data.get(chat_id)
     if not data:
         bot.send_message(chat_id, "⚠️ Сталася помилка. Спробуйте ще раз /start")
@@ -441,10 +546,10 @@ def on_gdpr_accept(message: types.Message):
             data.get("Місто", ""),
             data.get("ТЦ", ""),
             data.get("Адреса", ""),
-            data.get("Телефон", ""),      # корпоративний тел. магазину
+            data.get("Телефон", ""),
             data.get("Посада", ""),
             data.get("ПІБ", ""),
-            data.get("user_phone", ""),   # телефон кандидата
+            data.get("user_phone", ""),
             str(message.from_user.id),
         ]
         _sheet.append_row(row, value_input_option="RAW")
@@ -453,37 +558,60 @@ def on_gdpr_accept(message: types.Message):
     except Exception as e:
         print(f"❌ Google Sheets error: {e}")
 
-    # ── Повідомлення HR ──
+    # ── Повідомлення HR з кнопкою «Написати кандидату» (пункт 5) ──
+    tg_id   = message.from_user.id
+    tg_user = message.from_user.username
+    corp_phone = data.get("Телефон", "")
+
     hr_text = (
         "📩 <b>НОВА ЗАЯВКА НА РОБОТУ</b>\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
         f"🏙️ <b>Місто:</b> {data.get('Місто', '')}\n"
         f"🏬 <b>ТЦ:</b> {data.get('ТЦ', '')}\n"
         f"📍 <b>Адреса:</b> {data.get('Адреса', '')}\n"
-        f"☎️ <b>Корп. тел.:</b> {data.get('Телефон', '')}\n"
+        f"☎️ <b>Корп. тел.:</b> {corp_phone or '—'}\n"
         f"💼 <b>Посада:</b> {data.get('Посада', '')}\n"
         f"👤 <b>ПІБ:</b> {data.get('ПІБ', '')}\n"
         f"📞 <b>Телефон:</b> {data.get('user_phone', '')}\n"
-        f"🆔 <b>Telegram ID:</b> @{message.from_user.username or message.from_user.id}\n"
+        f"🆔 <b>Telegram:</b> @{tg_user or tg_id}\n"
         f"📅 <b>Дата:</b> {today}\n"
         f"💾 <b>Google Sheets:</b> {'✅' if gs_ok else '❌'}\n"
         "━━━━━━━━━━━━━━━━━━━━━━"
     )
+
+    # Inline-кнопка для HR — відкриває чат з кандидатом
+    hr_kb = types.InlineKeyboardMarkup()
+    if tg_user:
+        hr_kb.add(types.InlineKeyboardButton(
+            text=f"✉️ Написати {get_first_name(data.get('ПІБ', ''))}",
+            url=f"https://t.me/{tg_user}"
+        ))
+    else:
+        hr_kb.add(types.InlineKeyboardButton(
+            text=f"✉️ Написати {get_first_name(data.get('ПІБ', ''))}",
+            url=f"tg://user?id={tg_id}"
+        ))
+
     try:
-        bot.send_message(HR_CHAT_ID, hr_text, parse_mode="HTML")
+        bot.send_message(HR_CHAT_ID, hr_text, parse_mode="HTML", reply_markup=hr_kb)
     except Exception as e:
         print(f"❌ HR chat error: {e}")
 
-    # ── Відповідь кандидату ──
-    # ВИПРАВЛЕНО: звертаємось по імені (друге слово ПІБ), а не по прізвищу
+    # ── Відповідь кандидату (пункт 7) ──
     first_name = get_first_name(data.get("ПІБ", ""))
+    phone_line = (
+        f"📞 Якщо є питання — телефонуйте у наш магазин:\n"
+        f"   <b>{corp_phone}</b>"
+        if corp_phone else
+        "📬 Ми зв'яжемося з вами найближчим часом!"
+    )
     bot.send_message(
         chat_id,
         (
-            "🎉 <b>Заявку прийнято!</b>\n\n"
+            "🎉 <b>Заявку успішно відправлено!</b>\n\n"
             f"Дякуємо, <b>{first_name}</b>! 👏\n\n"
-            f"📞 Якщо є питання, телефонуйте у наш магазин:\n"
-            f"   {data.get('Телефон', '—')}\n\n"
+            "Наш HR-менеджер розгляне вашу кандидатуру та зв'яжеться з вами.\n\n"
+            f"{phone_line}\n\n"
             "Бажаємо успіху! 💙"
         ),
         reply_markup=types.ReplyKeyboardRemove(),
@@ -492,6 +620,7 @@ def on_gdpr_accept(message: types.Message):
     user_data.pop(chat_id, None)
 
 
+# ── Скасування ──
 @bot.message_handler(func=lambda m: m.text == "❌ Скасувати")
 def on_cancel(message: types.Message):
     chat_id = message.chat.id
@@ -499,6 +628,17 @@ def on_cancel(message: types.Message):
     bot.send_message(
         chat_id,
         "❌ Заявку скасовано.\n\nЯкщо захочете спробувати знову — натисніть /start 🙂",
+        reply_markup=types.ReplyKeyboardRemove(),
+    )
+
+
+# ── Повідомлення про прострочену сесію ──
+def _send_session_expired(chat_id: int):
+    user_data.pop(chat_id, None)
+    bot.send_message(
+        chat_id,
+        "⏳ <b>Сесію завершено через тривалу бездіяльність.</b>\n\n"
+        "Натисніть /start, щоб почати знову.",
         reply_markup=types.ReplyKeyboardRemove(),
     )
 
