@@ -43,6 +43,24 @@ if not WEBHOOK_URL:
         "Вкажіть WEBHOOK_URL вручну у Environment Variables."
     )
 
+# ── Пароль дашборду ────────────────────────────────────────────
+# Задайте змінну DASHBOARD_PASSWORD у Environment Variables на Render.
+# Якщо не задано — використовується пароль за замовчуванням (змініть!).
+DASHBOARD_PASSWORD = os.getenv("DASHBOARD_PASSWORD", "lcwaikiki2024")
+
+# Простий in-memory токен (достатньо для одного пароля без БД).
+# При рестарті сервера токени скидаються — користувачі просто введуть пароль знову.
+import secrets as _secrets
+_valid_tokens: set = set()
+
+def _make_token() -> str:
+    tok = _secrets.token_hex(32)
+    _valid_tokens.add(tok)
+    return tok
+
+def _check_token(tok: str) -> bool:
+    return tok in _valid_tokens
+
 # Таймаут сесії (секунди). 30 хвилин бездіяльності — сесія скидається.
 SESSION_TIMEOUT = 30 * 60
 
@@ -656,23 +674,38 @@ def dashboard():
     return send_from_directory(dashboard_dir, "dashboard.html")
 
 
+@app.route("/api/auth", methods=["POST"])
+def api_auth():
+    """Перевіряє пароль і повертає сесійний токен."""
+    try:
+        body = request.get_json(force=True) or {}
+        pwd  = body.get("password", "")
+        if pwd == DASHBOARD_PASSWORD:
+            return jsonify({"ok": True, "token": _make_token()})
+        return jsonify({"ok": False}), 401
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/stats", methods=["GET"])
 def api_stats():
     """
     Повертає JSON зі всіма рядками Google Sheets для дашборду.
+    Захищений токеном — токен передається в заголовку X-Auth-Token.
     Структура рядка: [дата, місто, ТЦ, адреса, корп.тел, посада, ПІБ, тел.кандидата, tg_id]
     Індекси:          0      1      2    3        4         5       6    7               8
     """
+    token = request.headers.get("X-Auth-Token", "")
+    if not _check_token(token):
+        return jsonify({"error": "Unauthorized"}), 401
+
     try:
         rows = _sheet.get_all_values()
         result = []
         for row in rows:
-            # пропускаємо заголовок (якщо є) та порожні рядки
             if not row or not row[0]:
                 continue
-            # перша колонка — дата у форматі "DD.MM.YYYY HH:MM"
             raw_date = row[0].strip()
-            # перетворюємо на ISO для зручності сортування у JS
             try:
                 dt = datetime.strptime(raw_date, "%d.%m.%Y %H:%M")
                 iso_date = dt.strftime("%Y-%m-%d")
@@ -680,21 +713,20 @@ def api_stats():
                 iso_date = ""
 
             result.append({
-                "datetime": raw_date,
-                "date":     iso_date,
-                "city":     row[1].strip() if len(row) > 1 else "",
-                "store":    row[2].strip() if len(row) > 2 else "",
-                "address":  row[3].strip() if len(row) > 3 else "",
-                "phone":    row[4].strip() if len(row) > 4 else "",
-                "position": row[5].strip() if len(row) > 5 else "",
-                "name":     row[6].strip() if len(row) > 6 else "",
-                "userphone":row[7].strip() if len(row) > 7 else "",
-                "tg_id":    row[8].strip() if len(row) > 8 else "",
+                "datetime":  raw_date,
+                "date":      iso_date,
+                "city":      row[1].strip() if len(row) > 1 else "",
+                "store":     row[2].strip() if len(row) > 2 else "",
+                "address":   row[3].strip() if len(row) > 3 else "",
+                "phone":     row[4].strip() if len(row) > 4 else "",
+                "position":  row[5].strip() if len(row) > 5 else "",
+                "name":      row[6].strip() if len(row) > 6 else "",
+                "userphone": row[7].strip() if len(row) > 7 else "",
+                "tg_id":     row[8].strip() if len(row) > 8 else "",
             })
 
         resp = jsonify({"rows": result, "total": len(result)})
-        # дозволяємо браузеру кешувати на 60 секунд
-        resp.headers["Cache-Control"] = "public, max-age=60"
+        resp.headers["Cache-Control"] = "private, max-age=60"
         return resp
 
     except Exception as e:
