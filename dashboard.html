@@ -9,254 +9,238 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Montserrat:wght@700;800;900&display=swap');
 :root{
   --navy:#1B2B5E;--navy2:#243470;--red:#E31E24;--red2:#FF3B41;
+  --green:#2E7D32;--green-bg:#E8F5E9;
   --white:#fff;--grey0:#F4F6FB;--grey1:#E8ECF5;--grey2:#B0BAD0;--grey3:#6B7A99;
   --text:#1A2340;--card-r:14px;
-  --shadow:0 4px 24px rgba(27,43,94,.10);--shadow2:0 8px 40px rgba(27,43,94,.18);
+  --shadow:0 4px 24px rgba(27,43,94,.10);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Inter',sans-serif;background:var(--grey0);color:var(--text);min-height:100vh}
 
-/* ── LOGIN SCREEN ─────────────────────────────── */
-#loginScreen{
-  position:fixed;inset:0;background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 60%,#1a1a2e 100%);
-  display:flex;align-items:center;justify-content:center;z-index:9999;
-}
+/* ── LOGIN ── */
+#loginScreen{position:fixed;inset:0;background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 60%,#1a1a2e 100%);display:flex;align-items:center;justify-content:center;z-index:9999}
 #loginScreen.hidden{display:none}
-.login-box{
-  background:rgba(255,255,255,.06);backdrop-filter:blur(20px);
-  border:1px solid rgba(255,255,255,.12);border-radius:20px;
-  padding:2.5rem 2.5rem 2rem;width:340px;text-align:center;
-  box-shadow:0 24px 80px rgba(0,0,0,.4);
-}
-.login-logo{
-  width:56px;height:56px;background:var(--red);border-radius:12px;
-  display:flex;align-items:center;justify-content:center;
-  font-family:'Montserrat',sans-serif;font-weight:900;font-size:15px;color:#fff;
-  margin:0 auto 1.2rem;
-}
+.login-box{background:rgba(255,255,255,.06);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:2.5rem 2.5rem 2rem;width:340px;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.4)}
+.login-logo{width:56px;height:56px;background:var(--red);border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:'Montserrat',sans-serif;font-weight:900;font-size:15px;color:#fff;margin:0 auto 1.2rem}
 .login-title{font-family:'Montserrat',sans-serif;font-weight:800;font-size:1.25rem;color:#fff;margin-bottom:.3rem}
 .login-sub{font-size:.8rem;color:var(--grey2);margin-bottom:1.8rem}
-.login-input{
-  width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);
-  border-radius:10px;padding:.85rem 1rem;color:#fff;font-size:.95rem;font-family:'Inter',sans-serif;
-  outline:none;transition:border .2s;margin-bottom:1rem;
-}
+.login-input{width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:.85rem 1rem;color:#fff;font-size:.95rem;font-family:'Inter',sans-serif;outline:none;transition:border .2s;margin-bottom:1rem}
 .login-input::placeholder{color:rgba(255,255,255,.35)}
 .login-input:focus{border-color:var(--red)}
-.login-btn{
-  width:100%;background:var(--red);border:none;border-radius:10px;
-  padding:.9rem;color:#fff;font-size:.95rem;font-weight:700;font-family:'Inter',sans-serif;
-  cursor:pointer;transition:background .2s,transform .1s;
-}
+.login-btn{width:100%;background:var(--red);border:none;border-radius:10px;padding:.9rem;color:#fff;font-size:.95rem;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;transition:background .2s,transform .1s}
 .login-btn:hover{background:var(--red2)}
 .login-btn:active{transform:scale(.98)}
 .login-error{color:#ff6b6b;font-size:.8rem;margin-top:.8rem;min-height:1.2em}
 
-/* ── LOADING ──────────────────────────────────── */
-.loading-overlay{
-  position:fixed;inset:0;background:var(--grey0);
-  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;z-index:998;transition:opacity .4s
-}
+/* ── LOADING ── */
+.loading-overlay{position:fixed;inset:0;background:var(--grey0);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;z-index:998;transition:opacity .4s}
 .loading-overlay.hidden{opacity:0;pointer-events:none}
 .loader{width:48px;height:48px;border:4px solid var(--grey1);border-top-color:var(--red);border-radius:50%;animation:spin .9s linear infinite}
 .loading-text{font-weight:600;color:var(--navy);font-size:.9rem}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* ── HEADER ───────────────────────────────────── */
-header{
-  background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%);
-  padding:0 2rem;display:flex;align-items:center;justify-content:space-between;
-  height:68px;box-shadow:0 2px 20px rgba(0,0,0,.25);position:sticky;top:0;z-index:100;
-}
+/* ── HEADER ── */
+header{background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:68px;box-shadow:0 2px 20px rgba(0,0,0,.25);position:sticky;top:0;z-index:100}
 .header-brand{display:flex;align-items:center;gap:14px}
-.header-logo{
-  width:42px;height:42px;background:var(--red);border-radius:8px;
-  display:flex;align-items:center;justify-content:center;
-  font-family:'Montserrat',sans-serif;font-weight:900;font-size:13px;color:#fff;flex-shrink:0;
-}
+.header-logo{width:42px;height:42px;background:var(--red);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Montserrat',sans-serif;font-weight:900;font-size:13px;color:#fff;flex-shrink:0}
 .header-title{font-family:'Montserrat',sans-serif;font-weight:800;font-size:1.1rem;color:#fff}
 .header-sub{font-size:.75rem;color:var(--grey2);margin-top:1px}
-.header-right{display:flex;align-items:center;gap:12px}
-
-/* ── TABS ─────────────────────────────────────── */
-.tabs{
-  display:flex;gap:4px;background:rgba(255,255,255,.1);border-radius:10px;padding:4px;
-}
-.tab-btn{
-  background:none;border:none;color:rgba(255,255,255,.6);font-family:'Inter',sans-serif;
-  font-size:.82rem;font-weight:600;padding:6px 14px;border-radius:7px;cursor:pointer;transition:all .2s;
-}
+.header-right{display:flex;align-items:center;gap:10px}
+.tabs{display:flex;gap:4px;background:rgba(255,255,255,.1);border-radius:10px;padding:4px}
+.tab-btn{background:none;border:none;color:rgba(255,255,255,.6);font-family:'Inter',sans-serif;font-size:.82rem;font-weight:600;padding:6px 14px;border-radius:7px;cursor:pointer;transition:all .2s}
 .tab-btn.active{background:#fff;color:var(--navy)}
-
-.refresh-btn{
-  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;
-  font-family:'Inter',sans-serif;font-size:.8rem;font-weight:500;padding:7px 14px;
-  border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:7px;transition:background .2s;
-}
-.refresh-btn:hover{background:rgba(255,255,255,.22)}
-.refresh-btn.spinning svg{animation:spin .8s linear infinite}
-
-.logout-btn{
-  background:none;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.6);
-  font-family:'Inter',sans-serif;font-size:.78rem;padding:6px 12px;border-radius:8px;cursor:pointer;transition:all .2s;
-}
+.hdr-btn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;font-family:'Inter',sans-serif;font-size:.8rem;font-weight:500;padding:7px 13px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .2s;white-space:nowrap}
+.hdr-btn:hover{background:rgba(255,255,255,.22)}
+.hdr-btn.spinning svg{animation:spin .8s linear infinite}
+.logout-btn{background:none;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.6);font-family:'Inter',sans-serif;font-size:.78rem;padding:6px 12px;border-radius:8px;cursor:pointer;transition:all .2s}
 .logout-btn:hover{border-color:var(--red);color:var(--red)}
 
-/* ── PAGES ────────────────────────────────────── */
+/* ── LAYOUT ── */
 .page{display:none}
 .page.active{display:block}
 main{max-width:1280px;margin:0 auto;padding:2rem 1.5rem 3rem}
 
-/* ── KPI ──────────────────────────────────────── */
+/* ── KPI ── */
 .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem}
-.kpi-card{
-  background:#fff;border-radius:var(--card-r);padding:1.4rem 1.5rem;
-  box-shadow:var(--shadow);display:flex;align-items:flex-start;gap:14px;
-  position:relative;overflow:hidden;
-}
+.kpi-card{background:#fff;border-radius:var(--card-r);padding:1.3rem 1.4rem;box-shadow:var(--shadow);display:flex;align-items:flex-start;gap:12px;position:relative;overflow:hidden}
 .kpi-card::after{content:'';position:absolute;top:0;left:0;width:4px;height:100%;background:var(--red);border-radius:4px 0 0 4px}
-.kpi-icon{width:44px;height:44px;border-radius:10px;background:var(--grey0);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
-.kpi-val{font-family:'Montserrat',sans-serif;font-weight:800;font-size:2rem;line-height:1;color:var(--navy)}
-.kpi-label{font-size:.78rem;color:var(--grey3);margin-top:4px;font-weight:500}
-.kpi-delta{font-size:.75rem;font-weight:600;margin-top:6px;padding:2px 8px;border-radius:20px;display:inline-block}
-.kpi-delta.up{background:#E8F5E9;color:#2E7D32}
+.kpi-icon{width:42px;height:42px;border-radius:10px;background:var(--grey0);display:flex;align-items:center;justify-content:center;font-size:1.25rem;flex-shrink:0}
+.kpi-val{font-family:'Montserrat',sans-serif;font-weight:800;font-size:1.9rem;line-height:1;color:var(--navy)}
+.kpi-label{font-size:.75rem;color:var(--grey3);margin-top:3px;font-weight:500}
+.kpi-delta{font-size:.72rem;font-weight:600;margin-top:5px;padding:2px 7px;border-radius:20px;display:inline-flex;align-items:center;gap:3px}
+.kpi-delta.up{background:var(--green-bg);color:var(--green)}
+.kpi-delta.down{background:#FFEBEE;color:#C62828}
 .kpi-delta.zero{background:var(--grey1);color:var(--grey3)}
 
-/* ── CARDS ────────────────────────────────────── */
+/* ── CARDS ── */
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem}
 .grid-3{display:grid;grid-template-columns:2fr 1fr;gap:1.25rem;margin-bottom:1.25rem}
+.grid-map{display:grid;grid-template-columns:1.2fr 1fr;gap:1.25rem;margin-bottom:1.25rem}
 .card{background:#fff;border-radius:var(--card-r);box-shadow:var(--shadow);overflow:hidden}
-.card-head{display:flex;align-items:center;justify-content:space-between;padding:1.1rem 1.4rem .9rem;border-bottom:1px solid var(--grey1)}
-.card-title{font-family:'Montserrat',sans-serif;font-weight:700;font-size:.92rem;color:var(--navy);display:flex;align-items:center;gap:8px}
-.card-badge{font-size:.72rem;font-weight:600;padding:3px 10px;border-radius:20px;background:var(--grey1);color:var(--grey3)}
+.card-head{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.4rem .85rem;border-bottom:1px solid var(--grey1)}
+.card-title{font-family:'Montserrat',sans-serif;font-weight:700;font-size:.9rem;color:var(--navy);display:flex;align-items:center;gap:8px}
+.card-badge{font-size:.72rem;font-weight:600;padding:3px 10px;border-radius:20px;background:var(--grey1);color:var(--grey3);border:none;cursor:default}
 .card-body{padding:1.2rem 1.4rem}
-.timeline-wrap{height:220px}
+.timeline-wrap{height:210px}
 
-/* ── BARS ─────────────────────────────────────── */
-.hbar-list{display:flex;flex-direction:column;gap:10px}
-.hbar-label{display:flex;justify-content:space-between;font-size:.8rem;margin-bottom:4px}
+/* ── BARS ── */
+.hbar-list{display:flex;flex-direction:column;gap:9px}
+.hbar-label{display:flex;justify-content:space-between;font-size:.79rem;margin-bottom:3px}
 .hbar-name{font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
 .hbar-count{font-weight:700;color:var(--navy)}
-.hbar-track{background:var(--grey1);border-radius:4px;height:8px;overflow:hidden}
+.hbar-track{background:var(--grey1);border-radius:4px;height:7px;overflow:hidden}
 .hbar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--navy),var(--red));transition:width .8s cubic-bezier(.4,0,.2,1)}
 
-/* ── DONUT ────────────────────────────────────── */
+/* ── DONUT ── */
 .donut-wrap{display:flex;align-items:center;gap:1.5rem}
-.donut-canvas-wrap{position:relative;width:160px;height:160px;flex-shrink:0}
+.donut-canvas-wrap{position:relative;width:150px;height:150px;flex-shrink:0}
 .donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
-.donut-center-val{font-family:'Montserrat',sans-serif;font-weight:800;font-size:1.7rem;color:var(--navy);line-height:1}
-.donut-center-label{font-size:.65rem;color:var(--grey3);font-weight:500;margin-top:2px}
-.donut-legend{flex:1;display:flex;flex-direction:column;gap:10px}
+.donut-center-val{font-family:'Montserrat',sans-serif;font-weight:800;font-size:1.6rem;color:var(--navy);line-height:1}
+.donut-center-label{font-size:.63rem;color:var(--grey3);font-weight:500;margin-top:2px}
+.donut-legend{flex:1;display:flex;flex-direction:column;gap:9px}
 .legend-item{display:flex;align-items:center;gap:8px}
 .legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-.legend-text{font-size:.8rem;color:var(--text)}
-.legend-pct{font-size:.8rem;font-weight:700;color:var(--navy);margin-left:auto}
+.legend-text{font-size:.79rem;color:var(--text)}
+.legend-pct{font-size:.79rem;font-weight:700;color:var(--navy);margin-left:auto}
 
-/* ── RECENT ───────────────────────────────────── */
+/* ── RECENT ── */
 .recent-list{display:flex;flex-direction:column}
-.recent-item{display:flex;align-items:center;gap:12px;padding:.8rem 0;border-bottom:1px solid var(--grey0)}
+.recent-item{display:flex;align-items:center;gap:11px;padding:.75rem 0;border-bottom:1px solid var(--grey0)}
 .recent-item:last-child{border-bottom:none}
-.recent-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--navy),var(--red));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;color:#fff;flex-shrink:0}
-.recent-name{font-weight:600;font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.recent-meta{font-size:.75rem;color:var(--grey3);margin-top:1px}
-.recent-date{font-size:.72rem;color:var(--grey2);white-space:nowrap}
+.recent-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--navy),var(--red));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.8rem;color:#fff;flex-shrink:0}
+.recent-name{font-weight:600;font-size:.83rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.recent-meta{font-size:.73rem;color:var(--grey3);margin-top:1px}
+.recent-date{font-size:.7rem;color:var(--grey2);white-space:nowrap}
 
-/* ── TABLE (store ranking) ────────────────────── */
+/* ── STORE TABLE ── */
 .store-table{width:100%;border-collapse:collapse}
-.store-table th{text-align:left;font-size:.72rem;font-weight:600;color:var(--grey3);text-transform:uppercase;letter-spacing:.06em;padding:0 .8rem .8rem;border-bottom:1px solid var(--grey1)}
-.store-table td{padding:.7rem .8rem;font-size:.83rem;border-bottom:1px solid var(--grey0);vertical-align:middle}
+.store-table th{text-align:left;font-size:.7rem;font-weight:600;color:var(--grey3);text-transform:uppercase;letter-spacing:.06em;padding:0 .7rem .7rem;border-bottom:1px solid var(--grey1)}
+.store-table td{padding:.65rem .7rem;font-size:.81rem;border-bottom:1px solid var(--grey0);vertical-align:middle}
 .store-table tr:last-child td{border-bottom:none}
 .store-table tr:hover td{background:var(--grey0)}
-.rank-badge{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;font-size:.75rem;font-weight:700;background:var(--grey1);color:var(--grey3)}
+.rank-badge{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;font-size:.73rem;font-weight:700;background:var(--grey1);color:var(--grey3)}
 .rank-badge.gold{background:#FFF3CD;color:#B8860B}
 .rank-badge.silver{background:#F0F0F0;color:#607D8B}
 .rank-badge.bronze{background:#FFE0CC;color:#BF6030}
-.city-pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:.72rem;font-weight:600;background:var(--grey1);color:var(--navy)}
-.mini-bar{width:80px;height:6px;background:var(--grey1);border-radius:3px;overflow:hidden;display:inline-block}
+.city-pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.7rem;font-weight:600;background:var(--grey1);color:var(--navy)}
+.mini-bar{width:70px;height:5px;background:var(--grey1);border-radius:3px;overflow:hidden;display:inline-block}
 .mini-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--navy),var(--red))}
 
-/* ── CANDIDATES TABLE PAGE ────────────────────── */
-.cand-toolbar{
-  display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:1.25rem;
+/* ── HEATMAP ── */
+.heatmap-wrap{overflow-x:auto}
+.heatmap-grid{display:flex;gap:3px}
+.heatmap-col{display:flex;flex-direction:column;gap:3px}
+.heatmap-cell{width:14px;height:14px;border-radius:2px;background:var(--grey1);cursor:default;transition:transform .1s;position:relative}
+.heatmap-cell:hover{transform:scale(1.3);z-index:1}
+.heatmap-labels-days{display:flex;flex-direction:column;gap:3px;margin-right:6px;padding-top:22px}
+.heatmap-label{font-size:.63rem;color:var(--grey3);height:14px;line-height:14px;text-align:right;white-space:nowrap}
+.heatmap-months{display:flex;gap:3px;margin-bottom:4px;padding-left:0}
+.hm-month{font-size:.63rem;color:var(--grey3);white-space:nowrap}
+.heatmap-legend{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:.7rem;color:var(--grey3)}
+.heatmap-legend-cells{display:flex;gap:3px}
+.heatmap-outer{display:flex}
+
+/* ── MAP ── */
+.map-wrap{position:relative;padding:.5rem 0}
+.map-svg{width:100%;height:auto;display:block}
+.map-city-dot{cursor:pointer;transition:r .2s}
+.map-city-dot:hover circle{stroke-width:2;stroke:#fff}
+.map-tooltip{
+  position:absolute;background:var(--navy);color:#fff;border-radius:8px;
+  padding:6px 12px;font-size:.78rem;font-weight:600;pointer-events:none;
+  white-space:nowrap;opacity:0;transition:opacity .15s;z-index:10;
+  box-shadow:0 4px 16px rgba(0,0,0,.3);
 }
+.map-tooltip::after{content:'';position:absolute;bottom:-5px;left:50%;transform:translateX(-50%);border:5px solid transparent;border-bottom:none;border-top-color:var(--navy)}
+
+/* ── CANDIDATES PAGE ── */
+.cand-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:1.1rem}
 .search-box{
-  flex:1;min-width:200px;max-width:320px;
-  background:#fff;border:1px solid var(--grey1);border-radius:10px;
-  padding:.65rem 1rem .65rem 2.5rem;font-size:.87rem;font-family:'Inter',sans-serif;
+  flex:1;min-width:200px;max-width:280px;background:#fff;border:1px solid var(--grey1);
+  border-radius:10px;padding:.62rem 1rem .62rem 2.3rem;font-size:.85rem;font-family:'Inter',sans-serif;
   color:var(--text);outline:none;transition:border .2s;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%236B7A99' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='M21 21l-4.35-4.35'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;background-position:10px center;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='15' height='15' fill='none' stroke='%236B7A99' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='M21 21l-4.35-4.35'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:9px center;
 }
 .search-box:focus{border-color:var(--navy)}
-.filter-select{
-  background:#fff;border:1px solid var(--grey1);border-radius:10px;
-  padding:.65rem 1rem;font-size:.85rem;font-family:'Inter',sans-serif;color:var(--text);
-  outline:none;cursor:pointer;transition:border .2s;
-}
+.filter-select{background:#fff;border:1px solid var(--grey1);border-radius:10px;padding:.62rem .9rem;font-size:.83rem;font-family:'Inter',sans-serif;color:var(--text);outline:none;cursor:pointer}
 .filter-select:focus{border-color:var(--navy)}
-.export-btn{
-  margin-left:auto;background:var(--navy);color:#fff;border:none;border-radius:10px;
-  padding:.65rem 1.2rem;font-size:.83rem;font-weight:600;font-family:'Inter',sans-serif;
-  cursor:pointer;display:flex;align-items:center;gap:7px;transition:background .2s;
-}
-.export-btn:hover{background:var(--navy2)}
 
+/* Швидкі фільтри часу */
+.quick-filters{display:flex;gap:4px;background:#fff;border:1px solid var(--grey1);border-radius:10px;padding:3px}
+.qf-btn{background:none;border:none;border-radius:7px;padding:5px 11px;font-size:.78rem;font-weight:600;font-family:'Inter',sans-serif;color:var(--grey3);cursor:pointer;transition:all .15s;white-space:nowrap}
+.qf-btn.active{background:var(--navy);color:#fff}
+
+.toolbar-right{display:flex;gap:8px;margin-left:auto}
+.action-btn{background:var(--navy);color:#fff;border:none;border-radius:10px;padding:.62rem 1.1rem;font-size:.81rem;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .2s;white-space:nowrap}
+.action-btn:hover{background:var(--navy2)}
+.action-btn.secondary{background:#fff;color:var(--navy);border:1px solid var(--grey1)}
+.action-btn.secondary:hover{background:var(--grey0)}
+
+/* Candidates table */
 .cand-card{background:#fff;border-radius:var(--card-r);box-shadow:var(--shadow);overflow:hidden}
-.cand-table-wrap{overflow-x:auto}
-.cand-table{width:100%;border-collapse:collapse;font-size:.83rem}
-.cand-table th{
-  text-align:left;font-size:.72rem;font-weight:600;color:var(--grey3);text-transform:uppercase;
-  letter-spacing:.06em;padding:.85rem 1rem;border-bottom:2px solid var(--grey1);
-  white-space:nowrap;position:sticky;top:0;background:#fff;z-index:1;cursor:pointer;user-select:none;
-}
+.cand-table-wrap{overflow-x:auto;max-height:calc(100vh - 280px)}
+.cand-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.cand-table th{text-align:left;font-size:.7rem;font-weight:600;color:var(--grey3);text-transform:uppercase;letter-spacing:.06em;padding:.8rem 1rem;border-bottom:2px solid var(--grey1);white-space:nowrap;position:sticky;top:0;background:#fff;z-index:1;cursor:pointer;user-select:none}
 .cand-table th:hover{color:var(--navy)}
-.cand-table th .sort-arrow{margin-left:4px;opacity:.4;font-size:.65rem}
-.cand-table th.sorted .sort-arrow{opacity:1;color:var(--red)}
-.cand-table td{padding:.75rem 1rem;border-bottom:1px solid var(--grey0);vertical-align:middle}
+.cand-table th .sa{margin-left:3px;opacity:.35;font-size:.6rem}
+.cand-table th.sorted .sa{opacity:1;color:var(--red)}
+.cand-table td{padding:.7rem 1rem;border-bottom:1px solid var(--grey0);vertical-align:middle}
 .cand-table tr:last-child td{border-bottom:none}
 .cand-table tr:hover td{background:var(--grey0)}
-.name-cell{font-weight:600;color:var(--text)}
-.phone-link{
-  color:var(--navy);font-weight:600;text-decoration:none;
-  display:inline-flex;align-items:center;gap:5px;
-}
+.name-cell{font-weight:600}
+.phone-link{color:var(--navy);font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:4px;font-size:.8rem}
 .phone-link:hover{color:var(--red)}
-.tg-link{color:var(--grey3);font-size:.75rem;text-decoration:none}
+.tg-link{color:var(--grey3);font-size:.72rem;text-decoration:none;margin-left:4px}
 .tg-link:hover{color:var(--red)}
-.pos-badge{
-  display:inline-block;padding:2px 9px;border-radius:20px;font-size:.72rem;font-weight:600;
-  background:var(--grey1);color:var(--navy);white-space:nowrap;
-}
+.pos-badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.7rem;font-weight:600;background:var(--grey1);color:var(--navy);white-space:nowrap}
 .pos-badge.seller{background:#E3F0FF;color:#1B52A8}
 .pos-badge.cashier{background:#FFF0E3;color:#B85C00}
 .pos-badge.storage{background:#E8F5E9;color:#2E7D32}
-.date-cell{color:var(--grey3);font-size:.78rem;white-space:nowrap}
+.date-cell{color:var(--grey3);font-size:.76rem;white-space:nowrap}
 
-.pagination{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:1rem 1.2rem;border-top:1px solid var(--grey1);font-size:.82rem;color:var(--grey3);
-}
-.pg-btns{display:flex;gap:6px}
-.pg-btn{
-  width:32px;height:32px;border:1px solid var(--grey1);background:#fff;border-radius:7px;
-  cursor:pointer;font-size:.82rem;font-weight:600;color:var(--navy);transition:all .15s;
-  display:flex;align-items:center;justify-content:center;
-}
-.pg-btn:hover{border-color:var(--navy);background:var(--grey0)}
+/* Статус */
+.status-select{border:none;border-radius:20px;padding:3px 8px;font-size:.7rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;outline:none;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='none' stroke='%236B7A99' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 5px center;padding-right:20px}
+.status-select.new{background-color:#E3F2FD;color:#1565C0}
+.status-select.review{background-color:#FFF8E1;color:#E65100}
+.status-select.invited{background-color:#E8F5E9;color:#2E7D32}
+.status-select.hired{background-color:#E0F2F1;color:#00695C}
+.status-select.rejected{background-color:#FFEBEE;color:#C62828}
+
+/* Pagination */
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:.9rem 1.2rem;border-top:1px solid var(--grey1);font-size:.8rem;color:var(--grey3)}
+.pg-btns{display:flex;gap:4px}
+.pg-btn{width:30px;height:30px;border:1px solid var(--grey1);background:#fff;border-radius:6px;cursor:pointer;font-size:.8rem;font-weight:600;color:var(--navy);transition:all .15s;display:flex;align-items:center;justify-content:center}
+.pg-btn:hover{border-color:var(--navy)}
 .pg-btn.active{background:var(--navy);color:#fff;border-color:var(--navy)}
-.pg-btn:disabled{opacity:.35;cursor:default}
+.pg-btn:disabled{opacity:.3;cursor:default}
 
-/* ── RESPONSIVE ───────────────────────────────── */
+/* ── PRINT / PDF ── */
+@media print{
+  #loginScreen,header,.cand-toolbar,.pagination,.tab-btn:not(.active),.hdr-btn,.logout-btn,
+  #page-candidates,.quick-filters,.toolbar-right,button{display:none!important}
+  body{background:#fff!important}
+  main{padding:0!important;max-width:100%!important}
+  .page{display:block!important}
+  #page-stats{display:block!important}
+  .card,.kpi-card{box-shadow:none!important;border:1px solid #ddd}
+  .grid-2,.grid-3,.grid-map{grid-template-columns:1fr 1fr!important}
+  .kpi-row{grid-template-columns:repeat(4,1fr)!important}
+  .print-header{display:block!important}
+}
+.print-header{display:none;margin-bottom:1.5rem}
+.print-header h1{font-family:'Montserrat',sans-serif;font-size:1.4rem;font-weight:800;color:var(--navy)}
+.print-header p{font-size:.85rem;color:var(--grey3);margin-top:4px}
+
+/* ── RESPONSIVE ── */
 @media(max-width:900px){
   .kpi-row{grid-template-columns:repeat(2,1fr)}
-  .grid-2,.grid-3{grid-template-columns:1fr}
-  .tabs .tab-btn{padding:6px 10px;font-size:.75rem}
+  .grid-2,.grid-3,.grid-map{grid-template-columns:1fr}
 }
 @media(max-width:600px){
   main{padding:1rem .75rem 2rem}
   header{padding:0 1rem}
   .header-sub,.logout-btn{display:none}
-  .kpi-row{grid-template-columns:1fr 1fr}
 }
 </style>
 </head>
@@ -267,20 +251,18 @@ main{max-width:1280px;margin:0 auto;padding:2rem 1.5rem 3rem}
   <div class="login-box">
     <div class="login-logo">LCW</div>
     <div class="login-title">LC Waikiki HR</div>
-    <div class="login-sub">Введіть пароль для доступу до дашборду</div>
+    <div class="login-sub">Введіть пароль для доступу</div>
     <input class="login-input" type="password" id="pwdInput" placeholder="Пароль" autocomplete="current-password">
     <button class="login-btn" onclick="doLogin()">Увійти</button>
     <div class="login-error" id="loginError"></div>
   </div>
 </div>
 
-<!-- LOADING -->
 <div class="loading-overlay" id="overlay">
   <div class="loader"></div>
   <div class="loading-text">Завантаження даних…</div>
 </div>
 
-<!-- HEADER -->
 <header>
   <div class="header-brand">
     <div class="header-logo">LCW</div>
@@ -291,30 +273,47 @@ main{max-width:1280px;margin:0 auto;padding:2rem 1.5rem 3rem}
   </div>
   <div class="header-right">
     <div class="tabs">
-      <button class="tab-btn active" onclick="showPage('stats')">📊 Статистика</button>
-      <button class="tab-btn"        onclick="showPage('candidates')">👥 Кандидати</button>
+      <button class="tab-btn active" onclick="showPage('stats',this)">📊 Статистика</button>
+      <button class="tab-btn"        onclick="showPage('candidates',this)">👥 Кандидати</button>
     </div>
-    <button class="refresh-btn" id="refreshBtn" onclick="loadData()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
-        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-      </svg>
+    <button class="hdr-btn" id="refreshBtn" onclick="loadData()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
       Оновити
+    </button>
+    <button class="hdr-btn" onclick="printPDF()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      PDF-звіт
     </button>
     <button class="logout-btn" onclick="doLogout()">Вийти</button>
   </div>
 </header>
 
 <main>
-  <!-- ═══════════════════ PAGE: STATS ═══════════════════ -->
+  <!-- ══════════ PAGE: STATS ══════════ -->
   <div class="page active" id="page-stats">
+
+    <!-- PDF шапка (видима тільки при друку) -->
+    <div class="print-header">
+      <h1>LC Waikiki Ukraine — HR Звіт</h1>
+      <p id="print-date-line">Сформовано: —</p>
+    </div>
+
+    <!-- KPI -->
     <div class="kpi-row">
       <div class="kpi-card">
         <div class="kpi-icon">📋</div>
         <div>
           <div class="kpi-val" id="kpi-total">—</div>
           <div class="kpi-label">Усього заявок</div>
-          <div class="kpi-delta up" id="kpi-week">за тиждень: —</div>
+          <div class="kpi-delta zero" id="kpi-vs-prev">vs минулий місяць</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon">📅</div>
+        <div>
+          <div class="kpi-val" id="kpi-month">—</div>
+          <div class="kpi-label">За поточний місяць</div>
+          <div class="kpi-delta zero" id="kpi-month-vs">vs попередній</div>
         </div>
       </div>
       <div class="kpi-card">
@@ -326,28 +325,21 @@ main{max-width:1280px;margin:0 auto;padding:2rem 1.5rem 3rem}
         </div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-icon">🏬</div>
+        <div class="kpi-icon">📈</div>
         <div>
-          <div class="kpi-val" id="kpi-stores">—</div>
-          <div class="kpi-label">Магазинів з заявками</div>
-          <div class="kpi-delta zero" id="kpi-top-store">топ: —</div>
-        </div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-icon">📅</div>
-        <div>
-          <div class="kpi-val" id="kpi-today">—</div>
-          <div class="kpi-label">Заявок сьогодні</div>
-          <div class="kpi-delta up" id="kpi-month">за місяць: —</div>
+          <div class="kpi-val" id="kpi-week">—</div>
+          <div class="kpi-label">За останній тиждень</div>
+          <div class="kpi-delta zero" id="kpi-today">сьогодні: —</div>
         </div>
       </div>
     </div>
 
+    <!-- Динаміка + Посади -->
     <div class="grid-2">
       <div class="card">
         <div class="card-head">
-          <div class="card-title"><span>📈</span> Динаміка заявок</div>
-          <div style="display:flex;gap:6px">
+          <div class="card-title">📈 Динаміка заявок</div>
+          <div style="display:flex;gap:5px">
             <button class="card-badge" id="btn7"  onclick="switchPeriod(7)"  style="cursor:pointer">7д</button>
             <button class="card-badge" id="btn30" onclick="switchPeriod(30)" style="cursor:pointer;background:var(--navy);color:#fff">30д</button>
             <button class="card-badge" id="btn90" onclick="switchPeriod(90)" style="cursor:pointer">90д</button>
@@ -356,7 +348,7 @@ main{max-width:1280px;margin:0 auto;padding:2rem 1.5rem 3rem}
         <div class="card-body"><div class="timeline-wrap"><canvas id="timelineChart"></canvas></div></div>
       </div>
       <div class="card">
-        <div class="card-head"><div class="card-title"><span>💼</span> Розподіл по посадах</div></div>
+        <div class="card-head"><div class="card-title">💼 Розподіл по посадах</div></div>
         <div class="card-body">
           <div class="donut-wrap">
             <div class="donut-canvas-wrap">
@@ -372,30 +364,76 @@ main{max-width:1280px;margin:0 auto;padding:2rem 1.5rem 3rem}
       </div>
     </div>
 
-    <div class="grid-2">
+    <!-- Тепловий календар -->
+    <div class="card" style="margin-bottom:1.25rem">
+      <div class="card-head">
+        <div class="card-title">🗓️ Активність по днях</div>
+        <span class="card-badge" id="hm-range">останні 16 тижнів</span>
+      </div>
+      <div class="card-body">
+        <div class="heatmap-outer">
+          <div class="heatmap-labels-days" id="hmDayLabels"></div>
+          <div style="flex:1;overflow-x:auto">
+            <div class="heatmap-months" id="hmMonths"></div>
+            <div class="heatmap-grid" id="hmGrid"></div>
+          </div>
+        </div>
+        <div class="heatmap-legend">
+          Менше
+          <div class="heatmap-legend-cells">
+            <div class="heatmap-cell" style="background:var(--grey1)"></div>
+            <div class="heatmap-cell" style="background:#BBDEFB"></div>
+            <div class="heatmap-cell" style="background:#64B5F6"></div>
+            <div class="heatmap-cell" style="background:#1976D2"></div>
+            <div class="heatmap-cell" style="background:var(--navy)"></div>
+          </div>
+          Більше
+        </div>
+      </div>
+    </div>
+
+    <!-- Карта + Топ міста -->
+    <div class="grid-map">
       <div class="card">
         <div class="card-head">
-          <div class="card-title"><span>🏙️</span> Заявки по містах</div>
+          <div class="card-title">🗺️ Географія заявок</div>
+          <span class="card-badge" id="map-total-badge">—</span>
+        </div>
+        <div class="card-body" style="padding:.8rem 1rem;position:relative">
+          <div class="map-tooltip" id="mapTooltip"></div>
+          <div class="map-wrap">
+            <!-- SVG карта України зі спрощеними координатами міст -->
+            <svg class="map-svg" viewBox="0 0 560 380" xmlns="http://www.w3.org/2000/svg" id="ukraineMap">
+              <!-- Спрощений контур України -->
+              <path d="M60,140 L80,110 L120,95 L155,80 L200,70 L240,65 L280,60 L320,58 L360,62 L400,68 L440,75 L470,88 L495,105 L510,125 L515,148 L510,170 L500,190 L490,215 L480,235 L470,255 L455,270 L435,280 L410,288 L385,292 L355,295 L325,298 L295,295 L265,290 L235,285 L205,278 L175,268 L150,255 L125,238 L105,218 L85,198 L68,178 Z"
+                fill="#EEF2FF" stroke="#C5CAE9" stroke-width="1.5"/>
+              <!-- Крим (спрощено) -->
+              <path d="M295,295 L310,310 L330,318 L355,315 L370,305 L365,295 L355,295 Z"
+                fill="#E8ECF5" stroke="#C5CAE9" stroke-width="1"/>
+              <!-- Мітки міст будуть вставлені JS -->
+              <g id="cityDots"></g>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">🏙️ Заявки по містах</div>
           <span class="card-badge" id="cities-count">—</span>
         </div>
         <div class="card-body"><div class="hbar-list" id="citiesBars"></div></div>
       </div>
-      <div class="card">
-        <div class="card-head">
-          <div class="card-title"><span>🏆</span> Топ магазини</div>
-          <span class="card-badge" id="stores-shown">—</span>
-        </div>
-        <div class="card-body"><div class="hbar-list" id="storesBars"></div></div>
-      </div>
     </div>
 
+    <!-- Топ магазини + Останні -->
     <div class="grid-3">
       <div class="card">
         <div class="card-head">
-          <div class="card-title"><span>📊</span> Рейтинг магазинів</div>
+          <div class="card-title">📊 Рейтинг магазинів</div>
           <span class="card-badge" id="table-count">—</span>
         </div>
-        <div class="card-body" style="padding:0 1.4rem 1rem">
+        <div class="card-body" style="padding:0 1.2rem 1rem">
           <table class="store-table">
             <thead><tr><th>#</th><th>Магазин</th><th>Місто</th><th>Заявки</th><th></th></tr></thead>
             <tbody id="storeTableBody"></tbody>
@@ -403,18 +441,18 @@ main{max-width:1280px;margin:0 auto;padding:2rem 1.5rem 3rem}
         </div>
       </div>
       <div class="card">
-        <div class="card-head"><div class="card-title"><span>🕐</span> Останні заявки</div></div>
-        <div class="card-body" style="padding:.4rem 1.4rem 1rem">
+        <div class="card-head"><div class="card-title">🕐 Останні заявки</div></div>
+        <div class="card-body" style="padding:.3rem 1.2rem .8rem">
           <div class="recent-list" id="recentList"></div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ═══════════════════ PAGE: CANDIDATES ═══════════════════ -->
+  <!-- ══════════ PAGE: CANDIDATES ══════════ -->
   <div class="page" id="page-candidates">
     <div class="cand-toolbar">
-      <input class="search-box" type="text" id="candSearch" placeholder="Пошук за ім'ям, містом, магазином…" oninput="filterCandidates()">
+      <input class="search-box" type="text" id="candSearch" placeholder="Пошук за ім'ям, містом…" oninput="filterCandidates()">
       <select class="filter-select" id="filterCity" onchange="filterCandidates()">
         <option value="">Усі міста</option>
       </select>
@@ -424,10 +462,19 @@ main{max-width:1280px;margin:0 auto;padding:2rem 1.5rem 3rem}
         <option>Касир</option>
         <option>Комірник</option>
       </select>
-      <button class="export-btn" onclick="exportCSV()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Експорт CSV
-      </button>
+      <!-- Швидкі фільтри часу (пункт 8) -->
+      <div class="quick-filters">
+        <button class="qf-btn" onclick="setQuickFilter('today',this)">Сьогодні</button>
+        <button class="qf-btn" onclick="setQuickFilter('week',this)">Тиждень</button>
+        <button class="qf-btn" onclick="setQuickFilter('month',this)">Місяць</button>
+        <button class="qf-btn active" onclick="setQuickFilter('all',this)">Всі</button>
+      </div>
+      <div class="toolbar-right">
+        <button class="action-btn secondary" onclick="exportCSV()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          CSV
+        </button>
+      </div>
     </div>
 
     <div class="cand-card">
@@ -435,13 +482,14 @@ main{max-width:1280px;margin:0 auto;padding:2rem 1.5rem 3rem}
         <table class="cand-table">
           <thead>
             <tr>
-              <th onclick="sortBy('name')"     id="th-name">     ПІБ <span class="sort-arrow">▼</span></th>
-              <th onclick="sortBy('position')" id="th-position"> Посада <span class="sort-arrow">▼</span></th>
-              <th onclick="sortBy('city')"     id="th-city">     Місто <span class="sort-arrow">▼</span></th>
-              <th onclick="sortBy('store')"    id="th-store">    Магазин <span class="sort-arrow">▼</span></th>
+              <th onclick="sortBy('name')"     id="th-name">     ПІБ <span class="sa">▼</span></th>
+              <th onclick="sortBy('position')" id="th-position"> Посада <span class="sa">▼</span></th>
+              <th onclick="sortBy('city')"     id="th-city">     Місто <span class="sa">▼</span></th>
+              <th onclick="sortBy('store')"    id="th-store">    Магазин <span class="sa">▼</span></th>
               <th>                                                Телефон</th>
-              <th>                                                Telegram</th>
-              <th onclick="sortBy('datetime')" id="th-datetime"> Дата <span class="sort-arrow">▼</span></th>
+              <th>                                                TG</th>
+              <th>                                                Статус</th>
+              <th onclick="sortBy('date')"     id="th-date">     Дата <span class="sa">▼</span></th>
             </tr>
           </thead>
           <tbody id="candTableBody"></tbody>
@@ -456,180 +504,310 @@ main{max-width:1280px;margin:0 auto;padding:2rem 1.5rem 3rem}
 </main>
 
 <script>
-// ══════════════════════════════════════════════════════════════
-// CONFIG — пароль зберігається тут (або задається через env)
-// ══════════════════════════════════════════════════════════════
-// Пароль береться з /api/config або задається прямо тут.
-// Щоб змінити пароль — просто оновіть змінну DASHBOARD_PASSWORD
-// у Flask (Environment Variable на Render) і задеплойте.
-const HARDCODED_PWD = null; // залишити null — пароль перевіряється на сервері
-
-// ── LOGIN ──────────────────────────────────────────────────────
-function doLogin() {
-  const pwd = document.getElementById('pwdInput').value.trim();
-  if (!pwd) return;
-  // Відправляємо пароль на сервер для перевірки
-  fetch('/api/auth', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({password: pwd})
-  })
-  .then(r => r.json())
-  .then(d => {
-    if (d.ok) {
-      sessionStorage.setItem('lcw_auth', d.token);
-      document.getElementById('loginScreen').classList.add('hidden');
-      loadData();
-    } else {
-      const err = document.getElementById('loginError');
-      err.textContent = '❌ Невірний пароль';
-      document.getElementById('pwdInput').value = '';
-      setTimeout(() => err.textContent = '', 3000);
-    }
-  })
-  .catch(() => {
-    document.getElementById('loginError').textContent = '⚠️ Помилка з\'єднання';
-  });
+// ══════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════
+function doLogin(){
+  const pwd=document.getElementById('pwdInput').value.trim();
+  if(!pwd)return;
+  fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pwd})})
+  .then(r=>r.json()).then(d=>{
+    if(d.ok){sessionStorage.setItem('lcw_auth',d.token);document.getElementById('loginScreen').classList.add('hidden');loadData()}
+    else{const e=document.getElementById('loginError');e.textContent='❌ Невірний пароль';document.getElementById('pwdInput').value='';setTimeout(()=>e.textContent='',3000)}
+  }).catch(()=>{document.getElementById('loginError').textContent='⚠️ Помилка з\'єднання'});
 }
-
-function doLogout() {
-  sessionStorage.removeItem('lcw_auth');
-  location.reload();
-}
-
-// Enter на полі пароля
-document.getElementById('pwdInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') doLogin();
-});
-
-// Перевіряємо чи вже авторизовані
-(function checkAuth() {
-  const token = sessionStorage.getItem('lcw_auth');
-  if (token) {
-    document.getElementById('loginScreen').classList.add('hidden');
-    loadData();
-  } else {
-    document.getElementById('overlay').classList.add('hidden');
-  }
+function doLogout(){sessionStorage.removeItem('lcw_auth');location.reload()}
+document.getElementById('pwdInput').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
+(function checkAuth(){
+  if(sessionStorage.getItem('lcw_auth')){document.getElementById('loginScreen').classList.add('hidden');loadData()}
+  else document.getElementById('overlay').classList.add('hidden');
 })();
 
-// ── TABS ───────────────────────────────────────────────────────
-function showPage(name) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('page-' + name).classList.add('active');
-  event.target.classList.add('active');
+// ══════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════
+function showPage(name,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  btn.classList.add('active');
 }
 
-// ── DATA ───────────────────────────────────────────────────────
-let rawData = null;
-let currentPeriod = 30;
-let charts = {};
+// ══════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════
+let rawData=null, currentPeriod=30, charts={};
+let candFiltered=[], candSortKey='date', candSortDir=-1, candPage=1, quickFilter='all';
+const PAGE_SIZE=20;
 
-// Кандидати — стан пагінації/сортування/фільтрації
-let candFiltered = [];
-let candSortKey  = 'datetime';
-let candSortDir  = -1; // -1 = desc
-let candPage     = 1;
-const PAGE_SIZE  = 20;
-
-async function loadData() {
-  const btn = document.getElementById('refreshBtn');
+async function loadData(){
+  const btn=document.getElementById('refreshBtn');
   btn.classList.add('spinning');
-  const token = sessionStorage.getItem('lcw_auth') || '';
-  try {
-    const res = await fetch('/api/stats?t=' + Date.now(), {
-      headers: {'X-Auth-Token': token}
-    });
-    if (res.status === 401) { doLogout(); return; }
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    rawData = await res.json();
+  const token=sessionStorage.getItem('lcw_auth')||'';
+  try{
+    const res=await fetch('/api/stats?t='+Date.now(),{headers:{'X-Auth-Token':token}});
+    if(res.status===401){doLogout();return}
+    rawData=await res.json();
     renderStats(rawData);
     buildCityFilter(rawData);
     filterCandidates();
-  } catch(e) {
-    console.error(e);
-  } finally {
-    btn.classList.remove('spinning');
-    document.getElementById('overlay').classList.add('hidden');
-  }
+  }catch(e){console.error(e)}
+  finally{btn.classList.remove('spinning');document.getElementById('overlay').classList.add('hidden')}
 }
 
-// ── STATS PAGE ─────────────────────────────────────────────────
-function renderStats(d) {
+// ══════════════════════════════════════════
+// STATS
+// ══════════════════════════════════════════
+function renderStats(d){
   renderKPI(d);
-  renderTimeline(d, currentPeriod);
+  renderTimeline(d,currentPeriod);
   renderPositions(d);
+  renderHeatmap(d);
+  renderMap(d);
   renderCities(d);
-  renderStoresBar(d);
   renderStoreTable(d);
   renderRecent(d);
 }
 
-function renderKPI(d) {
-  const today   = todayStr();
-  const weekAgo = daysAgoStr(7);
-  const monthAgo= daysAgoStr(30);
-  const total   = d.rows.length;
-  const todayCnt= d.rows.filter(r=>r.date>=today).length;
-  const weekCnt = d.rows.filter(r=>r.date>=weekAgo).length;
-  const monthCnt= d.rows.filter(r=>r.date>=monthAgo).length;
-  const cities  = new Set(d.rows.map(r=>r.city)).size;
-  const stores  = new Set(d.rows.map(r=>r.store)).size;
+// ── KPI з порівнянням (пункт 4) ──────────
+function renderKPI(d){
+  const now=new Date();
+  const thisMonthStart=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);
+  const prevMonthStart=new Date(now.getFullYear(),now.getMonth()-1,1).toISOString().slice(0,10);
+  const prevMonthEnd  =new Date(now.getFullYear(),now.getMonth(),0).toISOString().slice(0,10);
+  const weekAgo=daysAgoStr(7);
+  const today=todayStr();
+
+  const total   =d.rows.length;
+  const thisMonth=d.rows.filter(r=>r.date>=thisMonthStart).length;
+  const prevMonth=d.rows.filter(r=>r.date>=prevMonthStart&&r.date<=prevMonthEnd).length;
+  const weekCnt  =d.rows.filter(r=>r.date>=weekAgo).length;
+  const todayCnt =d.rows.filter(r=>r.date===today).length;
+  const cities   =new Set(d.rows.map(r=>r.city)).size;
+  const topCity  =topOf(d.rows,r=>r.city)||'—';
+
   set('kpi-total', total);
-  set('kpi-today', todayCnt);
+  set('kpi-month', thisMonth);
   set('kpi-cities', cities);
-  set('kpi-stores', stores);
-  set('kpi-week',  'за тиждень: '+weekCnt);
-  set('kpi-month', 'за місяць: '+monthCnt);
-  set('kpi-top-city',  'топ: '+(topOf(d.rows,r=>r.city)||'—'));
-  set('kpi-top-store', 'топ: '+(topOf(d.rows,r=>r.store)||'—'));
+  set('kpi-week', weekCnt);
+  set('kpi-today','сьогодні: '+todayCnt);
+  set('kpi-top-city','топ: '+topCity);
+
+  // Порівняння поточного місяця з попереднім
+  setDelta('kpi-month-vs', thisMonth, prevMonth, 'vs попередній');
+
+  // Порівняння всіх заявок: поточний місяць vs попередній
+  setDelta('kpi-vs-prev', thisMonth, prevMonth, 'поточний vs пред. місяць');
 }
 
-function renderTimeline(d, days) {
-  const labels=[], counts=[];
+function setDelta(id, curr, prev, label){
+  const el=document.getElementById(id);
+  if(!el)return;
+  if(prev===0){el.textContent=label+': —';el.className='kpi-delta zero';return}
+  const pct=Math.round((curr-prev)/prev*100);
+  const sign=pct>0?'↑ +':pct<0?'↓ ':'';
+  el.textContent=sign+pct+'% '+label;
+  el.className='kpi-delta '+(pct>0?'up':pct<0?'down':'zero');
+}
+
+// ── Динаміка ──────────────────────────────
+function renderTimeline(d,days){
+  const labels=[],counts=[];
   for(let i=days-1;i>=0;i--){
     const s=daysAgoStr(i);
-    labels.push(formatDateLabel(s,days));
+    labels.push(formatDateLabel(s));
     counts.push(d.rows.filter(r=>r.date===s).length);
   }
-  if(charts.timeline) charts.timeline.destroy();
-  const ctx=document.getElementById('timelineChart').getContext('2d');
-  charts.timeline=new Chart(ctx,{
+  if(charts.timeline)charts.timeline.destroy();
+  charts.timeline=new Chart(document.getElementById('timelineChart').getContext('2d'),{
     type:'line',
     data:{labels,datasets:[{data:counts,borderColor:'#E31E24',backgroundColor:'rgba(227,30,36,.08)',borderWidth:2.5,pointRadius:days<=14?4:2,pointBackgroundColor:'#E31E24',fill:true,tension:.4}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.parsed.y+' заявок'}}},
-      scales:{x:{grid:{display:false},ticks:{font:{size:10},color:'#6B7A99',maxRotation:0}},y:{grid:{color:'#E8ECF5'},ticks:{font:{size:10},color:'#6B7A99',precision:0},beginAtZero:true}}}
+      scales:{x:{grid:{display:false},ticks:{font:{size:10},color:'#6B7A99',maxRotation:0,maxTicksLimit:days<=14?days:10}},y:{grid:{color:'#E8ECF5'},ticks:{font:{size:10},color:'#6B7A99',precision:0},beginAtZero:true}}}
   });
 }
 
-function renderPositions(d) {
+// ── Посади ────────────────────────────────
+function renderPositions(d){
   const counts={};
   d.rows.forEach(r=>{counts[r.position]=(counts[r.position]||0)+1});
   const entries=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
   const total=d.rows.length;
-  const COLORS=['#1B2B5E','#E31E24','#4A90D9','#F5A623','#7B68EE'];
-  if(charts.position) charts.position.destroy();
+  const COLORS=['#1B2B5E','#E31E24','#4A90D9','#F5A623'];
+  if(charts.position)charts.position.destroy();
   charts.position=new Chart(document.getElementById('positionChart').getContext('2d'),{
     type:'doughnut',
     data:{labels:entries.map(e=>e[0]),datasets:[{data:entries.map(e=>e[1]),backgroundColor:COLORS,borderWidth:2,borderColor:'#fff'}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.label+': '+c.parsed+' ('+Math.round(c.parsed/total*100)+'%)'}}}}
   });
-  set('donut-total', total);
+  set('donut-total',total);
   document.getElementById('positionLegend').innerHTML=entries.map((e,i)=>`
     <div class="legend-item">
-      <div class="legend-dot" style="background:${COLORS[i]}"></div>
+      <div class="legend-dot" style="background:${COLORS[i]||'#999'}"></div>
       <span class="legend-text">${e[0]}</span>
       <span class="legend-pct">${Math.round(e[1]/total*100)}%</span>
     </div>`).join('');
 }
 
-function renderCities(d) {
+// ── Тепловий календар (пункт 5) ──────────
+function renderHeatmap(d){
+  const WEEKS=16;
+  const today=new Date(); today.setHours(0,0,0,0);
+  // починаємо з понеділка 16 тижнів тому
+  const startDay=new Date(today);
+  startDay.setDate(today.getDate()-today.getDay()+1-WEEKS*7);
+
+  // рахуємо заявки по датах
+  const byDate={};
+  d.rows.forEach(r=>{if(r.date)byDate[r.date]=(byDate[r.date]||0)+1});
+  const maxVal=Math.max(1,...Object.values(byDate));
+
+  // колір
+  function cellColor(val){
+    if(!val)return'var(--grey1)';
+    const t=val/maxVal;
+    if(t<.25)return'#BBDEFB';
+    if(t<.5) return'#64B5F6';
+    if(t<.75)return'#1976D2';
+    return'var(--navy)';
+  }
+
+  // мітки днів
+  const DAY_NAMES=['Пн','','Ср','','Пт','','Нд'];
+  document.getElementById('hmDayLabels').innerHTML=DAY_NAMES.map(d=>`<div class="heatmap-label">${d}</div>`).join('');
+
+  // місяці над сіткою
+  const months=['Січ','Лют','Мар','Кві','Тра','Чер','Лип','Сер','Вер','Жов','Лис','Гру'];
+  let monthsHtml='',lastMonth=-1;
+
+  // генеруємо сітку (стовпці = тижні)
+  let gridHtml='';
+  for(let w=0;w<WEEKS;w++){
+    gridHtml+='<div class="heatmap-col">';
+    for(let day=0;day<7;day++){
+      const d2=new Date(startDay);
+      d2.setDate(startDay.getDate()+w*7+day);
+      if(d2>today){gridHtml+='<div class="heatmap-cell" style="background:transparent"></div>';continue}
+      const iso=d2.toISOString().slice(0,10);
+      const cnt=byDate[iso]||0;
+      const col=cellColor(cnt);
+      const label=d2.toLocaleDateString('uk-UA',{day:'numeric',month:'short'})+(cnt?`: ${cnt} заяв`:'');
+      gridHtml+=`<div class="heatmap-cell" style="background:${col}" title="${label}"></div>`;
+      if(day===0&&d2.getMonth()!==lastMonth){
+        lastMonth=d2.getMonth();
+        monthsHtml+=`<span class="hm-month" style="min-width:${14*1+3}px">${months[lastMonth]}</span>`;
+      }
+    }
+    gridHtml+='</div>';
+  }
+  document.getElementById('hmGrid').innerHTML=gridHtml;
+  document.getElementById('hmMonths').innerHTML=monthsHtml;
+}
+
+// ── Карта України (пункт 6) ──────────────
+// Координати міст у просторі viewBox 560x380
+const CITY_COORDS={
+  'Київ':        {x:280,y:148},
+  'Харків':      {x:400,y:145},
+  'Одеса':       {x:240,y:262},
+  'Дніпро':      {x:370,y:195},
+  'Львів':       {x:105,y:140},
+  'Запоріжжя':   {x:375,y:228},
+  'Вінниця':     {x:200,y:175},
+  'Кривий Ріг':  {x:320,y:225},
+  'Миколаїв':    {x:290,y:255},
+  'Чернівці':    {x:145,y:200},
+  'Тернопіль':   {x:148,y:155},
+  'Рівне':       {x:148,y:128},
+  'Луцьк':       {x:120,y:118},
+  'Хмельницький':{x:185,y:165},
+  'Житомир':     {x:225,y:145},
+  'Черкаси':     {x:295,y:185},
+  'Суми':        {x:355,y:118},
+  'Полтава':     {x:370,y:162},
+  'Чернігів':    {x:300,y:112},
+  'Кам\'янське': {x:375,y:205},
+  'Кропивницький':{x:305,y:220},
+  'Івано-Франківськ':{x:130,y:170},
+  'Ужгород':     {x:88,y:162},
+  'Мукачево':    {x:95,y:170},
+  'Бориспіль':   {x:295,y:152},
+  'Біла Церква': {x:265,y:168},
+  'Шептицький':  {x:128,y:145},
+};
+
+function renderMap(d){
+  const counts={};
+  d.rows.forEach(r=>{if(r.city)counts[r.city]=(counts[r.city]||0)+1});
+  const maxVal=Math.max(1,...Object.values(counts));
+  const total=d.rows.length;
+  set('map-total-badge', total+' заявок');
+
+  const g=document.getElementById('cityDots');
+  g.innerHTML='';
+
+  Object.entries(counts).forEach(([city,cnt])=>{
+    const coord=CITY_COORDS[city];
+    if(!coord)return;
+    const r=6+Math.round((cnt/maxVal)*18); // радіус 6–24px
+    const opacity=0.55+0.45*(cnt/maxVal);
+
+    const group=document.createElementNS('http://www.w3.org/2000/svg','g');
+    group.setAttribute('class','map-city-dot');
+
+    // пульсуюче кільце для топ-міста
+    if(cnt===maxVal){
+      const ring=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      ring.setAttribute('cx',coord.x);ring.setAttribute('cy',coord.y);
+      ring.setAttribute('r',r+4);ring.setAttribute('fill','none');
+      ring.setAttribute('stroke','#E31E24');ring.setAttribute('stroke-width','1.5');
+      ring.setAttribute('opacity','0.4');
+      const anim=document.createElementNS('http://www.w3.org/2000/svg','animate');
+      anim.setAttribute('attributeName','r');anim.setAttribute('from',r+2);anim.setAttribute('to',r+10);
+      anim.setAttribute('dur','2s');anim.setAttribute('repeatCount','indefinite');
+      ring.appendChild(anim);g.appendChild(ring);
+    }
+
+    const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    circle.setAttribute('cx',coord.x);circle.setAttribute('cy',coord.y);
+    circle.setAttribute('r',r);
+    circle.setAttribute('fill',cnt===maxVal?'#E31E24':'#1B2B5E');
+    circle.setAttribute('opacity',opacity);
+    group.appendChild(circle);
+
+    // мітка міста
+    const text=document.createElementNS('http://www.w3.org/2000/svg','text');
+    text.setAttribute('x',coord.x);text.setAttribute('y',coord.y+r+10);
+    text.setAttribute('text-anchor','middle');text.setAttribute('font-size','9');
+    text.setAttribute('font-family','Inter,sans-serif');text.setAttribute('fill','#6B7A99');
+    text.setAttribute('font-weight','600');
+    text.textContent=city.length>10?city.slice(0,9)+'…':city;
+    group.appendChild(text);
+
+    // tooltip
+    group.addEventListener('mouseenter',e=>{
+      const tip=document.getElementById('mapTooltip');
+      tip.textContent=city+': '+cnt+' заявок';
+      tip.style.opacity='1';
+      const rect=document.getElementById('ukraineMap').getBoundingClientRect();
+      const mx=coord.x/560*rect.width;
+      const my=coord.y/380*rect.height;
+      tip.style.left=(mx-tip.offsetWidth/2+rect.left-rect.left)+'px';
+      tip.style.top=(my-r-30)+'px';
+    });
+    group.addEventListener('mouseleave',()=>{document.getElementById('mapTooltip').style.opacity='0'});
+
+    g.appendChild(group);
+  });
+}
+
+// ── Міста бари ───────────────────────────
+function renderCities(d){
   const counts={};
   d.rows.forEach(r=>{counts[r.city]=(counts[r.city]||0)+1});
   const entries=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
   const max=entries[0]?.[1]||1;
-  set('cities-count', entries.length+' міст');
+  set('cities-count',entries.length+' міст');
   document.getElementById('citiesBars').innerHTML=entries.map(([n,c])=>`
     <div class="hbar-item">
       <div class="hbar-label"><span class="hbar-name">🏙️ ${n}</span><span class="hbar-count">${c}</span></div>
@@ -637,25 +815,13 @@ function renderCities(d) {
     </div>`).join('');
 }
 
-function renderStoresBar(d) {
-  const counts={};
-  d.rows.forEach(r=>{counts[r.store]=(counts[r.store]||0)+1});
-  const entries=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  const max=entries[0]?.[1]||1;
-  set('stores-shown','топ '+entries.length);
-  document.getElementById('storesBars').innerHTML=entries.map(([n,c])=>`
-    <div class="hbar-item">
-      <div class="hbar-label"><span class="hbar-name">🏬 ${n}</span><span class="hbar-count">${c}</span></div>
-      <div class="hbar-track"><div class="hbar-fill" style="width:${(c/max*100).toFixed(1)}%"></div></div>
-    </div>`).join('');
-}
-
-function renderStoreTable(d) {
+// ── Рейтинг магазинів ─────────────────────
+function renderStoreTable(d){
   const counts={},cityOf={};
   d.rows.forEach(r=>{counts[r.store]=(counts[r.store]||0)+1;cityOf[r.store]=r.city});
   const entries=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
   const max=entries[0]?.[1]||1;
-  set('table-count', entries.length+' магазинів');
+  set('table-count',entries.length+' магазинів');
   const rc=i=>i===0?'gold':i===1?'silver':i===2?'bronze':'';
   document.getElementById('storeTableBody').innerHTML=entries.map(([n,c],i)=>`
     <tr>
@@ -667,108 +833,139 @@ function renderStoreTable(d) {
     </tr>`).join('');
 }
 
-function renderRecent(d) {
-  const sorted=[...d.rows].sort((a,b)=>b.datetime.localeCompare(a.datetime)).slice(0,8);
+// ── Останні заявки ────────────────────────
+function renderRecent(d){
+  const sorted=[...d.rows].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,8);
   document.getElementById('recentList').innerHTML=sorted.map(r=>{
     const parts=(r.name||'').trim().split(' ');
     const initials=(parts[0]?.[0]||'')+(parts[1]?.[0]||'');
-    const fn=parts[1]||parts[0]||'—',ln=parts[0]||'';
-    return `<div class="recent-item">
+    return`<div class="recent-item">
       <div class="recent-avatar">${initials.toUpperCase()}</div>
       <div style="flex:1;min-width:0">
-        <div class="recent-name">${ln} ${fn}</div>
-        <div class="recent-meta">${r.position} · ${r.store}</div>
+        <div class="recent-name">${r.name||'—'}</div>
+        <div class="recent-meta">${r.position||''} · ${r.store||''}</div>
       </div>
       <div class="recent-date">${formatDatetime(r.datetime)}</div>
     </div>`;
   }).join('');
 }
 
-// ── CANDIDATES PAGE ────────────────────────────────────────────
-function buildCityFilter(d) {
+// ══════════════════════════════════════════
+// CANDIDATES PAGE
+// ══════════════════════════════════════════
+function buildCityFilter(d){
   const cities=[...new Set(d.rows.map(r=>r.city))].sort();
   const sel=document.getElementById('filterCity');
   const cur=sel.value;
   sel.innerHTML='<option value="">Усі міста</option>'+cities.map(c=>`<option${c===cur?' selected':''}>${c}</option>`).join('');
 }
 
-function filterCandidates() {
-  if (!rawData) return;
-  const q   = document.getElementById('candSearch').value.toLowerCase();
-  const city= document.getElementById('filterCity').value;
-  const pos = document.getElementById('filterPos').value;
-
-  candFiltered = rawData.rows.filter(r => {
-    const haystack = [r.name,r.city,r.store,r.position,r.userphone].join(' ').toLowerCase();
-    return (!q || haystack.includes(q))
-        && (!city || r.city === city)
-        && (!pos  || r.position === pos);
-  });
-
-  // сортування
-  candFiltered.sort((a,b)=>{
-    const av=a[candSortKey]||'', bv=b[candSortKey]||'';
-    return av.localeCompare(bv, 'uk') * candSortDir;
-  });
-
-  candPage = 1;
-  renderCandidates();
-}
-
-function sortBy(key) {
-  if (candSortKey === key) candSortDir *= -1;
-  else { candSortKey = key; candSortDir = -1; }
-  document.querySelectorAll('.cand-table th').forEach(th => th.classList.remove('sorted'));
-  const th = document.getElementById('th-'+key);
-  if (th) th.classList.add('sorted');
+// Швидкі фільтри часу (пункт 8)
+let _quickFilterDate='';
+function setQuickFilter(type,btn){
+  quickFilter=type;
+  document.querySelectorAll('.qf-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(type==='today') _quickFilterDate=todayStr();
+  else if(type==='week')  _quickFilterDate=daysAgoStr(7);
+  else if(type==='month') _quickFilterDate=daysAgoStr(30);
+  else _quickFilterDate='';
+  candPage=1;
   filterCandidates();
 }
 
-function renderCandidates() {
-  const total = candFiltered.length;
-  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  candPage = Math.min(candPage, pages);
-  const start = (candPage-1)*PAGE_SIZE;
-  const slice = candFiltered.slice(start, start+PAGE_SIZE);
+function filterCandidates(){
+  if(!rawData)return;
+  const q  =document.getElementById('candSearch').value.toLowerCase();
+  const city=document.getElementById('filterCity').value;
+  const pos =document.getElementById('filterPos').value;
 
-  set('pg-info', `${start+1}–${Math.min(start+PAGE_SIZE,total)} з ${total} кандидатів`);
+  candFiltered=rawData.rows.filter(r=>{
+    const hay=[r.name,r.city,r.store,r.position,r.userphone].join(' ').toLowerCase();
+    return(!q||hay.includes(q))
+        &&(!city||r.city===city)
+        &&(!pos||r.position===pos)
+        &&(!_quickFilterDate||r.date>=_quickFilterDate);
+  });
 
-  const posBadge = p => {
-    const cl = p.includes('Продавець')?'seller':p.includes('Касир')?'cashier':'storage';
-    return `<span class="pos-badge ${cl}">${p}</span>`;
+  candFiltered.sort((a,b)=>{
+    const av=a[candSortKey]||'',bv=b[candSortKey]||'';
+    return av.localeCompare(bv,'uk')*candSortDir;
+  });
+  candPage=1;
+  renderCandidates();
+}
+
+function sortBy(key){
+  if(candSortKey===key)candSortDir*=-1;
+  else{candSortKey=key;candSortDir=-1}
+  document.querySelectorAll('.cand-table th').forEach(t=>t.classList.remove('sorted'));
+  const th=document.getElementById('th-'+key);
+  if(th)th.classList.add('sorted');
+  filterCandidates();
+}
+
+// Статуси кандидатів (пункт 7)
+const STATUS_OPTS=[
+  {val:'new',     label:'🆕 Новий',       cls:'new'},
+  {val:'review',  label:'👀 Розглядається',cls:'review'},
+  {val:'invited', label:'📞 Запрошений',  cls:'invited'},
+  {val:'hired',   label:'✅ Прийнятий',   cls:'hired'},
+  {val:'rejected',label:'❌ Відмова',      cls:'rejected'},
+];
+
+// Зберігаємо статуси в пам'яті (sessionStorage — зберігаються до закриття вкладки)
+function getStatus(tgId){return JSON.parse(sessionStorage.getItem('lcw_statuses')||'{}')[tgId]||'new'}
+function setStatus(tgId,val){
+  const obj=JSON.parse(sessionStorage.getItem('lcw_statuses')||'{}');
+  obj[tgId]=val;
+  sessionStorage.setItem('lcw_statuses',JSON.stringify(obj));
+}
+
+function renderCandidates(){
+  const total=candFiltered.length;
+  const pages=Math.max(1,Math.ceil(total/PAGE_SIZE));
+  candPage=Math.min(candPage,pages);
+  const start=(candPage-1)*PAGE_SIZE;
+  const slice=candFiltered.slice(start,start+PAGE_SIZE);
+
+  set('pg-info',`${start+1}–${Math.min(start+PAGE_SIZE,total)} з ${total}`);
+
+  const posBadge=p=>{
+    const cl=p.includes('Продавець')?'seller':p.includes('Касир')?'cashier':'storage';
+    return`<span class="pos-badge ${cl}">${p}</span>`;
   };
 
-  document.getElementById('candTableBody').innerHTML = slice.map(r => {
-    const parts  = (r.name||'').trim().split(' ');
-    const initials = (parts[0]?.[0]||'')+(parts[1]?.[0]||'');
-    const tgLink = r.tg_id
-      ? `<a class="tg-link" href="tg://user?id=${r.tg_id}" title="Написати в Telegram">✈️ TG</a>`
-      : '';
-    const phoneLink = r.userphone
-      ? `<a class="phone-link" href="tel:${r.userphone}">📞 ${r.userphone}</a>`
-      : '<span style="color:var(--grey2)">—</span>';
-    return `<tr>
-      <td>
-        <div style="display:flex;align-items:center;gap:9px">
-          <div class="recent-avatar" style="width:30px;height:30px;font-size:.75rem;flex-shrink:0">${initials.toUpperCase()}</div>
-          <span class="name-cell">${r.name||'—'}</span>
-        </div>
-      </td>
+  document.getElementById('candTableBody').innerHTML=slice.map(r=>{
+    const parts=(r.name||'').trim().split(' ');
+    const initials=(parts[0]?.[0]||'')+(parts[1]?.[0]||'');
+    const tgLink=r.tg_id?`<a class="tg-link" href="tg://user?id=${r.tg_id}" title="Написати">✈️</a>`:'';
+    const phoneLink=r.userphone?`<a class="phone-link" href="tel:${r.userphone}">📞 ${r.userphone}</a>`:'<span style="color:var(--grey2)">—</span>';
+    const uid=r.tg_id||r.name||Math.random();
+    const curStatus=getStatus(uid);
+    const statusOpts=STATUS_OPTS.map(s=>`<option value="${s.val}"${s.val===curStatus?' selected':''}>${s.label}</option>`).join('');
+    const statusCls=STATUS_OPTS.find(s=>s.val===curStatus)?.cls||'new';
+    return`<tr>
+      <td><div style="display:flex;align-items:center;gap:8px">
+        <div class="recent-avatar" style="width:28px;height:28px;font-size:.7rem;flex-shrink:0">${initials.toUpperCase()}</div>
+        <span class="name-cell">${r.name||'—'}</span>
+      </div></td>
       <td>${posBadge(r.position||'—')}</td>
       <td><span class="city-pill">${r.city||'—'}</span></td>
-      <td style="font-size:.8rem">${r.store||'—'}</td>
+      <td style="font-size:.79rem">${r.store||'—'}</td>
       <td>${phoneLink}</td>
       <td>${tgLink}</td>
+      <td><select class="status-select ${statusCls}" onchange="onStatusChange(this,'${uid}')">${statusOpts}</select></td>
       <td class="date-cell">${formatDatetime(r.datetime)}</td>
     </tr>`;
   }).join('');
 
   // Пагінація
-  const btns = document.getElementById('pg-btns');
-  let html = `<button class="pg-btn" onclick="goPage(${candPage-1})" ${candPage<=1?'disabled':''}>‹</button>`;
-  for (let p=1; p<=pages; p++) {
-    if (pages>7 && Math.abs(p-candPage)>2 && p!==1 && p!==pages) {
-      if(p===candPage-3||p===candPage+3) html+='<span style="padding:0 4px;color:var(--grey2)">…</span>';
+  const btns=document.getElementById('pg-btns');
+  let html=`<button class="pg-btn" onclick="goPage(${candPage-1})" ${candPage<=1?'disabled':''}>‹</button>`;
+  for(let p=1;p<=pages;p++){
+    if(pages>7&&Math.abs(p-candPage)>2&&p!==1&&p!==pages){
+      if(p===candPage-3||p===candPage+3)html+='<span style="padding:0 3px;color:var(--grey2)">…</span>';
       continue;
     }
     html+=`<button class="pg-btn${p===candPage?' active':''}" onclick="goPage(${p})">${p}</button>`;
@@ -777,57 +974,75 @@ function renderCandidates() {
   btns.innerHTML=html;
 }
 
-function goPage(p) { candPage=p; renderCandidates(); }
-
-// ── EXPORT CSV ─────────────────────────────────────────────────
-function exportCSV() {
-  const cols=['Дата','Місто','Магазин','Адреса','Корп.тел','Посада','ПІБ','Телефон','TG ID'];
-  const keys=['datetime','city','store','address','phone','position','name','userphone','tg_id'];
-  const esc = v => '"'+(v||'').replace(/"/g,'""')+'"';
-  const lines = [cols.map(esc).join(',')];
-  candFiltered.forEach(r => lines.push(keys.map(k=>esc(r[k])).join(',')));
-  const blob = new Blob(['\uFEFF'+lines.join('\n')], {type:'text/csv;charset=utf-8'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'lcwaikiki_candidates_'+todayStr()+'.csv';
-  a.click();
+function onStatusChange(sel,uid){
+  const val=sel.value;
+  setStatus(uid,val);
+  const cls=STATUS_OPTS.find(s=>s.val===val)?.cls||'new';
+  sel.className='status-select '+cls;
 }
 
-// ── PERIOD SWITCH ──────────────────────────────────────────────
-function switchPeriod(days) {
+function goPage(p){candPage=p;renderCandidates()}
+
+// ══════════════════════════════════════════
+// EXPORT CSV
+// ══════════════════════════════════════════
+function exportCSV(){
+  const cols=['Дата','Місто','Магазин','Адреса','Корп.тел','Посада','ПІБ','Телефон','TG ID'];
+  const keys=['datetime','city','store','address','phone','position','name','userphone','tg_id'];
+  const esc=v=>'"'+(v||'').replace(/"/g,'""')+'"';
+  const lines=[cols.map(esc).join(',')];
+  candFiltered.forEach(r=>lines.push(keys.map(k=>esc(r[k])).join(',')));
+  const blob=new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='lcwaikiki_'+todayStr()+'.csv';a.click();
+}
+
+// ══════════════════════════════════════════
+// PDF (пункт 10)
+// ══════════════════════════════════════════
+function printPDF(){
+  // Показуємо шапку з датою
+  const d=new Date().toLocaleDateString('uk-UA',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  set('print-date-line','Сформовано: '+d);
+  // Переключаємось на статистику якщо потрібно
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-stats').classList.add('active');
+  setTimeout(()=>window.print(),200);
+}
+
+// ══════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════
+function switchPeriod(days){
   currentPeriod=days;
   [7,30,90].forEach(d=>{
     const b=document.getElementById('btn'+d);
     if(d===days){b.style.background='var(--navy)';b.style.color='#fff'}
     else{b.style.background='';b.style.color=''}
   });
-  if(rawData) renderTimeline(rawData,days);
+  if(rawData)renderTimeline(rawData,days);
 }
 
-// ── UTILS ──────────────────────────────────────────────────────
-function todayStr(){ return new Date().toISOString().slice(0,10) }
-function daysAgoStr(n){ const d=new Date();d.setDate(d.getDate()-n);return d.toISOString().slice(0,10) }
-function formatDateLabel(iso,days){
-  const d=new Date(iso);
-  return d.toLocaleDateString('uk-UA',{day:'numeric',month:'short'});
-}
+function todayStr(){return new Date().toISOString().slice(0,10)}
+function daysAgoStr(n){const d=new Date();d.setDate(d.getDate()-n);return d.toISOString().slice(0,10)}
+function formatDateLabel(iso){const d=new Date(iso);return d.toLocaleDateString('uk-UA',{day:'numeric',month:'short'})}
 function formatDatetime(str){
-  if(!str) return '—';
+  if(!str)return'—';
   const parts=str.split(' ');
-  if(parts.length<2) return str;
-  const [d,m,y]=parts[0].split('.');
+  if(parts.length<2)return str;
+  const [dd,mm,yy]=parts[0].split('.');
   const today=new Date();today.setHours(0,0,0,0);
-  const dt=new Date(+y,+m-1,+d);dt.setHours(0,0,0,0);
-  const diff=Math.round((today-dt)/(1000*60*60*24));
-  if(diff===0) return 'сьогодні '+parts[1];
-  if(diff===1) return 'вчора '+parts[1];
+  const dt=new Date(+yy,+mm-1,+dd);dt.setHours(0,0,0,0);
+  const diff=Math.round((today-dt)/(864e5));
+  if(diff===0)return'сьогодні '+parts[1];
+  if(diff===1)return'вчора '+parts[1];
   return parts[0]+' '+parts[1];
 }
 function topOf(rows,fn){const c={};rows.forEach(r=>{const k=fn(r);c[k]=(c[k]||0)+1});return Object.entries(c).sort((a,b)=>b[1]-a[1])[0]?.[0]}
 function set(id,val){const el=document.getElementById(id);if(el)el.textContent=val}
 
 // Авто-оновлення кожні 5 хвилин
-setInterval(()=>{ if(sessionStorage.getItem('lcw_auth')) loadData(); }, 5*60*1000);
+setInterval(()=>{if(sessionStorage.getItem('lcw_auth'))loadData()},5*60*1000);
 </script>
 </body>
 </html>
