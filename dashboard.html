@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LC Waikiki — HR Дашборд</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Montserrat:wght@700;800;900&display=swap');
+
+  :root {
+    --navy:    #1B2B5E;
+    --navy2:   #243470;
+    --red:     #E31E24;
+    --red2:    #FF3B41;
+    --white:   #FFFFFF;
+    --grey0:   #F4F6FB;
+    --grey1:   #E8ECF5;
+    --grey2:   #B0BAD0;
+    --grey3:   #6B7A99;
+    --text:    #1A2340;
+    --card-r:  14px;
+    --shadow:  0 4px 24px rgba(27,43,94,.10);
+    --shadow2: 0 8px 40px rgba(27,43,94,.18);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--grey0);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy2) 100%);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 68px;
+    box-shadow: 0 2px 20px rgba(0,0,0,.25);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .header-logo {
+    width: 42px;
+    height: 42px;
+    background: var(--red);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 900;
+    font-size: 13px;
+    color: white;
+    letter-spacing: -0.5px;
+    flex-shrink: 0;
+  }
+  .header-title {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: white;
+    letter-spacing: 0.3px;
+  }
+  .header-sub {
+    font-size: .75rem;
+    color: var(--grey2);
+    font-weight: 400;
+    margin-top: 1px;
+  }
+  .header-meta {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .refresh-btn {
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.2);
+    color: white;
+    font-family: 'Inter', sans-serif;
+    font-size: .8rem;
+    font-weight: 500;
+    padding: 7px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: background .2s;
+  }
+  .refresh-btn:hover { background: rgba(255,255,255,.22); }
+  .refresh-btn.spinning svg { animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #last-update {
+    font-size: .75rem;
+    color: var(--grey2);
+  }
+
+  /* ── LAYOUT ── */
+  main {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 3rem;
+  }
+
+  /* ── KPI CARDS ── */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .kpi-card {
+    background: white;
+    border-radius: var(--card-r);
+    padding: 1.4rem 1.5rem;
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--red);
+    border-radius: 4px 0 0 4px;
+  }
+  .kpi-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: var(--grey0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+  }
+  .kpi-info { flex: 1; min-width: 0; }
+  .kpi-val {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 800;
+    font-size: 2rem;
+    line-height: 1;
+    color: var(--navy);
+  }
+  .kpi-label {
+    font-size: .78rem;
+    color: var(--grey3);
+    margin-top: 4px;
+    font-weight: 500;
+  }
+  .kpi-delta {
+    font-size: .75rem;
+    font-weight: 600;
+    margin-top: 6px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    display: inline-block;
+  }
+  .kpi-delta.up   { background: #E8F5E9; color: #2E7D32; }
+  .kpi-delta.zero { background: var(--grey1); color: var(--grey3); }
+
+  /* ── GRID ── */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+  .grid-3 {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+
+  /* ── CARD ── */
+  .card {
+    background: white;
+    border-radius: var(--card-r);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.1rem 1.4rem .9rem;
+    border-bottom: 1px solid var(--grey1);
+  }
+  .card-title {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    font-size: .92rem;
+    color: var(--navy);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title .icon { font-size: 1rem; }
+  .card-badge {
+    font-size: .72rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: var(--grey1);
+    color: var(--grey3);
+  }
+  .card-body { padding: 1.2rem 1.4rem; }
+  .chart-wrap { position: relative; }
+
+  /* ── TIMELINE ── */
+  .timeline-wrap { height: 220px; }
+
+  /* ── BAR (горизонтальний) ── */
+  .hbar-list { display: flex; flex-direction: column; gap: 10px; }
+  .hbar-item {}
+  .hbar-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: .8rem;
+    margin-bottom: 4px;
+  }
+  .hbar-name { font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+  .hbar-count { font-weight: 700; color: var(--navy); }
+  .hbar-track {
+    background: var(--grey1);
+    border-radius: 4px;
+    height: 8px;
+    overflow: hidden;
+  }
+  .hbar-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--navy), var(--red));
+    transition: width .8s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* ── DONUT ── */
+  .donut-wrap {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+  .donut-canvas-wrap { position: relative; width: 160px; height: 160px; flex-shrink: 0; }
+  .donut-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .donut-center-val {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 800;
+    font-size: 1.7rem;
+    color: var(--navy);
+    line-height: 1;
+  }
+  .donut-center-label {
+    font-size: .65rem;
+    color: var(--grey3);
+    font-weight: 500;
+    margin-top: 2px;
+  }
+  .donut-legend { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .legend-text { font-size: .8rem; color: var(--text); }
+  .legend-pct  { font-size: .8rem; font-weight: 700; color: var(--navy); margin-left: auto; }
+
+  /* ── ТАБЛИЦЯ МАГАЗИНІВ ── */
+  .store-table { width: 100%; border-collapse: collapse; }
+  .store-table th {
+    text-align: left;
+    font-size: .72rem;
+    font-weight: 600;
+    color: var(--grey3);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    padding: 0 .8rem .8rem;
+    border-bottom: 1px solid var(--grey1);
+  }
+  .store-table td {
+    padding: .75rem .8rem;
+    font-size: .83rem;
+    border-bottom: 1px solid var(--grey0);
+    vertical-align: middle;
+  }
+  .store-table tr:last-child td { border-bottom: none; }
+  .store-table tr:hover td { background: var(--grey0); }
+  .rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px; height: 24px;
+    border-radius: 6px;
+    font-size: .75rem;
+    font-weight: 700;
+    background: var(--grey1);
+    color: var(--grey3);
+  }
+  .rank-badge.gold   { background: #FFF3CD; color: #B8860B; }
+  .rank-badge.silver { background: #F0F0F0; color: #607D8B; }
+  .rank-badge.bronze { background: #FFE0CC; color: #BF6030; }
+  .city-pill {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 20px;
+    font-size: .72rem;
+    font-weight: 600;
+    background: var(--grey1);
+    color: var(--navy);
+  }
+  .count-strong {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    font-size: .95rem;
+    color: var(--navy);
+  }
+  .mini-bar {
+    width: 80px;
+    height: 6px;
+    background: var(--grey1);
+    border-radius: 3px;
+    overflow: hidden;
+    display: inline-block;
+  }
+  .mini-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--navy), var(--red));
+  }
+
+  /* ── ОСТАННІ ЗАЯВКИ ── */
+  .recent-list { display: flex; flex-direction: column; gap: 0; }
+  .recent-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: .8rem 0;
+    border-bottom: 1px solid var(--grey0);
+  }
+  .recent-item:last-child { border-bottom: none; }
+  .recent-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--navy), var(--red));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: .85rem;
+    color: white;
+    flex-shrink: 0;
+  }
+  .recent-info { flex: 1; min-width: 0; }
+  .recent-name { font-weight: 600; font-size: .85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .recent-meta { font-size: .75rem; color: var(--grey3); margin-top: 1px; }
+  .recent-date { font-size: .72rem; color: var(--grey2); white-space: nowrap; }
+
+  /* ── LOADING / ERROR ── */
+  .loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--grey0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+    z-index: 999;
+    transition: opacity .4s;
+  }
+  .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+  .loader {
+    width: 48px; height: 48px;
+    border: 4px solid var(--grey1);
+    border-top-color: var(--red);
+    border-radius: 50%;
+    animation: spin .9s linear infinite;
+  }
+  .loading-text { font-weight: 600; color: var(--navy); font-size: .9rem; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 520px) {
+    .kpi-row { grid-template-columns: 1fr 1fr; }
+    main { padding: 1rem .75rem 2rem; }
+    header { padding: 0 1rem; }
+    .header-sub { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="overlay">
+  <div class="loader"></div>
+  <div class="loading-text">Завантаження даних…</div>
+</div>
+
+<header>
+  <div class="header-brand">
+    <div class="header-logo">LCW</div>
+    <div>
+      <div class="header-title">LC Waikiki Ukraine</div>
+      <div class="header-sub">HR — Аналітика кандидатів</div>
+    </div>
+  </div>
+  <div class="header-meta">
+    <span id="last-update">—</span>
+    <button class="refresh-btn" id="refreshBtn" onclick="loadData()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+      </svg>
+      Оновити
+    </button>
+  </div>
+</header>
+
+<main>
+  <!-- KPI -->
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-icon">📋</div>
+      <div class="kpi-info">
+        <div class="kpi-val" id="kpi-total">—</div>
+        <div class="kpi-label">Усього заявок</div>
+        <div class="kpi-delta up" id="kpi-week">за тиждень: —</div>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon">🏙️</div>
+      <div class="kpi-info">
+        <div class="kpi-val" id="kpi-cities">—</div>
+        <div class="kpi-label">Міст охоплено</div>
+        <div class="kpi-delta zero" id="kpi-top-city">топ: —</div>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon">🏬</div>
+      <div class="kpi-info">
+        <div class="kpi-val" id="kpi-stores">—</div>
+        <div class="kpi-label">Магазинів з заявками</div>
+        <div class="kpi-delta zero" id="kpi-top-store">топ: —</div>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon">📅</div>
+      <div class="kpi-info">
+        <div class="kpi-val" id="kpi-today">—</div>
+        <div class="kpi-label">Заявок сьогодні</div>
+        <div class="kpi-delta up" id="kpi-month">за місяць: —</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Динаміка + Посади -->
+  <div class="grid-2" style="margin-bottom:1.25rem">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title"><span class="icon">📈</span> Динаміка заявок</div>
+        <div style="display:flex;gap:8px">
+          <button class="card-badge" id="btn7"  onclick="switchPeriod(7)"  style="cursor:pointer">7 днів</button>
+          <button class="card-badge" id="btn30" onclick="switchPeriod(30)" style="cursor:pointer;background:var(--navy);color:white">30 днів</button>
+          <button class="card-badge" id="btn90" onclick="switchPeriod(90)" style="cursor:pointer">90 днів</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="timeline-wrap"><canvas id="timelineChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title"><span class="icon">💼</span> Розподіл по посадах</div>
+      </div>
+      <div class="card-body">
+        <div class="donut-wrap">
+          <div class="donut-canvas-wrap">
+            <canvas id="positionChart"></canvas>
+            <div class="donut-center">
+              <div class="donut-center-val" id="donut-total">—</div>
+              <div class="donut-center-label">заявок</div>
+            </div>
+          </div>
+          <div class="donut-legend" id="positionLegend"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Топ міста + Топ магазини -->
+  <div class="grid-2" style="margin-bottom:1.25rem">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title"><span class="icon">🏙️</span> Заявки по містах</div>
+        <span class="card-badge" id="cities-count">—</span>
+      </div>
+      <div class="card-body">
+        <div class="hbar-list" id="citiesBars"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title"><span class="icon">🏆</span> Топ магазини</div>
+        <span class="card-badge" id="stores-shown">—</span>
+      </div>
+      <div class="card-body">
+        <div class="hbar-list" id="storesBars"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Таблиця магазинів + Останні заявки -->
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title"><span class="icon">📊</span> Таблиця магазинів</div>
+        <span class="card-badge" id="table-count">—</span>
+      </div>
+      <div class="card-body" style="padding:0 1.4rem 1rem">
+        <table class="store-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Магазин</th>
+              <th>Місто</th>
+              <th>Заявки</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="storeTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title"><span class="icon">🕐</span> Останні заявки</div>
+      </div>
+      <div class="card-body" style="padding:.4rem 1.4rem 1rem">
+        <div class="recent-list" id="recentList"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+// ── Конфігурація ──────────────────────────────────────────────
+// Дані підтягуються з /api/stats (Flask-ендпоінт на тому ж сервері)
+const API_URL = '/api/stats';
+
+// ── Стан ──────────────────────────────────────────────────────
+let rawData = null;
+let currentPeriod = 30;
+let charts = {};
+
+// ── Завантаження ──────────────────────────────────────────────
+async function loadData() {
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('spinning');
+
+  try {
+    const res = await fetch(API_URL + '?t=' + Date.now());
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    rawData = await res.json();
+    render(rawData);
+    document.getElementById('last-update').textContent =
+      'Оновлено: ' + new Date().toLocaleTimeString('uk-UA', {hour:'2-digit',minute:'2-digit'});
+  } catch(e) {
+    console.error(e);
+    document.getElementById('last-update').textContent = '⚠️ Помилка завантаження';
+  } finally {
+    btn.classList.remove('spinning');
+    document.getElementById('overlay').classList.add('hidden');
+  }
+}
+
+// ── Рендер ────────────────────────────────────────────────────
+function render(d) {
+  renderKPI(d);
+  renderTimeline(d, currentPeriod);
+  renderPositions(d);
+  renderCities(d);
+  renderStores(d);
+  renderTable(d);
+  renderRecent(d);
+}
+
+// KPI
+function renderKPI(d) {
+  const today = todayStr();
+  const weekAgo = daysAgoStr(7);
+  const monthAgo = daysAgoStr(30);
+
+  const total   = d.rows.length;
+  const todayCnt  = d.rows.filter(r => r.date >= today).length;
+  const weekCnt   = d.rows.filter(r => r.date >= weekAgo).length;
+  const monthCnt  = d.rows.filter(r => r.date >= monthAgo).length;
+  const cities  = new Set(d.rows.map(r => r.city)).size;
+  const stores  = new Set(d.rows.map(r => r.store)).size;
+
+  const topCity  = topOf(d.rows, r => r.city);
+  const topStore = topOf(d.rows, r => r.store);
+
+  set('kpi-total',  total);
+  set('kpi-today',  todayCnt);
+  set('kpi-cities', cities);
+  set('kpi-stores', stores);
+  set('kpi-week',   'за тиждень: ' + weekCnt);
+  set('kpi-month',  'за місяць: '  + monthCnt);
+  set('kpi-top-city',  'топ: ' + (topCity  || '—'));
+  set('kpi-top-store', 'топ: ' + (topStore || '—'));
+}
+
+// Динаміка
+function renderTimeline(d, days) {
+  const labels = [], counts = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const s = daysAgoStr(i);
+    labels.push(formatDate(s, days));
+    counts.push(d.rows.filter(r => r.date === s).length);
+  }
+
+  if (charts.timeline) charts.timeline.destroy();
+  const ctx = document.getElementById('timelineChart').getContext('2d');
+  charts.timeline = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data: counts,
+        borderColor: '#E31E24',
+        backgroundColor: 'rgba(227,30,36,.08)',
+        borderWidth: 2.5,
+        pointRadius: days <= 14 ? 4 : 2,
+        pointBackgroundColor: '#E31E24',
+        fill: true,
+        tension: .4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: {
+        callbacks: { label: ctx => ' ' + ctx.parsed.y + ' заявок' }
+      }},
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#6B7A99', maxRotation: 0 } },
+        y: { grid: { color: '#E8ECF5' }, ticks: { font: { size: 10 }, color: '#6B7A99', precision: 0 }, beginAtZero: true }
+      }
+    }
+  });
+}
+
+// Посади
+function renderPositions(d) {
+  const counts = {};
+  d.rows.forEach(r => { counts[r.position] = (counts[r.position]||0)+1; });
+  const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const total   = d.rows.length;
+
+  const COLORS = ['#1B2B5E','#E31E24','#4A90D9','#F5A623','#7B68EE'];
+
+  if (charts.position) charts.position.destroy();
+  const ctx = document.getElementById('positionChart').getContext('2d');
+  charts.position = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: entries.map(e=>e[0]),
+      datasets: [{ data: entries.map(e=>e[1]), backgroundColor: COLORS, borderWidth: 2, borderColor: '#fff' }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '68%',
+      plugins: { legend: { display: false }, tooltip: {
+        callbacks: { label: ctx => ' ' + ctx.label + ': ' + ctx.parsed + ' (' + Math.round(ctx.parsed/total*100) + '%)' }
+      }}
+    }
+  });
+
+  set('donut-total', total);
+
+  const legend = document.getElementById('positionLegend');
+  legend.innerHTML = entries.map((e,i) => `
+    <div class="legend-item">
+      <div class="legend-dot" style="background:${COLORS[i]}"></div>
+      <span class="legend-text">${e[0]}</span>
+      <span class="legend-pct">${Math.round(e[1]/total*100)}%</span>
+    </div>`).join('');
+}
+
+// Міста — горизонтальні бари
+function renderCities(d) {
+  const counts = {};
+  d.rows.forEach(r => { counts[r.city] = (counts[r.city]||0)+1; });
+  const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const max = entries[0]?.[1] || 1;
+
+  set('cities-count', entries.length + ' міст');
+  document.getElementById('citiesBars').innerHTML = entries.map(([name,cnt]) => `
+    <div class="hbar-item">
+      <div class="hbar-label">
+        <span class="hbar-name">🏙️ ${name}</span>
+        <span class="hbar-count">${cnt}</span>
+      </div>
+      <div class="hbar-track"><div class="hbar-fill" style="width:${(cnt/max*100).toFixed(1)}%"></div></div>
+    </div>`).join('');
+}
+
+// Топ магазини — бари (топ-10)
+function renderStores(d) {
+  const counts = {};
+  d.rows.forEach(r => { counts[r.store] = (counts[r.store]||0)+1; });
+  const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const max = entries[0]?.[1] || 1;
+
+  set('stores-shown', 'топ ' + entries.length);
+  document.getElementById('storesBars').innerHTML = entries.map(([name,cnt]) => `
+    <div class="hbar-item">
+      <div class="hbar-label">
+        <span class="hbar-name">🏬 ${name}</span>
+        <span class="hbar-count">${cnt}</span>
+      </div>
+      <div class="hbar-track"><div class="hbar-fill" style="width:${(cnt/max*100).toFixed(1)}%"></div></div>
+    </div>`).join('');
+}
+
+// Таблиця магазинів
+function renderTable(d) {
+  const counts = {};
+  const cityOf  = {};
+  d.rows.forEach(r => {
+    counts[r.store] = (counts[r.store]||0)+1;
+    cityOf[r.store] = r.city;
+  });
+  const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const max = entries[0]?.[1] || 1;
+
+  set('table-count', entries.length + ' магазинів');
+
+  const rankClass = i => i===0?'gold':i===1?'silver':i===2?'bronze':'';
+  document.getElementById('storeTableBody').innerHTML = entries.map(([name,cnt],i) => `
+    <tr>
+      <td><span class="rank-badge ${rankClass(i)}">${i+1}</span></td>
+      <td style="font-weight:500">${name}</td>
+      <td><span class="city-pill">${cityOf[name]||''}</span></td>
+      <td><span class="count-strong">${cnt}</span></td>
+      <td><div class="mini-bar"><div class="mini-bar-fill" style="width:${(cnt/max*100).toFixed(0)}%"></div></div></td>
+    </tr>`).join('');
+}
+
+// Останні 8 заявок
+function renderRecent(d) {
+  const sorted = [...d.rows].sort((a,b)=>b.datetime.localeCompare(a.datetime)).slice(0,8);
+  document.getElementById('recentList').innerHTML = sorted.map(r => {
+    const parts = (r.name||'').trim().split(' ');
+    const initials = (parts[0]?.[0]||'') + (parts[1]?.[0]||'');
+    const firstName = parts[1] || parts[0] || '—';
+    const lastName  = parts[0] || '';
+    return `
+    <div class="recent-item">
+      <div class="recent-avatar">${initials.toUpperCase()}</div>
+      <div class="recent-info">
+        <div class="recent-name">${lastName} ${firstName}</div>
+        <div class="recent-meta">${r.position} · ${r.store}</div>
+      </div>
+      <div class="recent-date">${formatDatetime(r.datetime)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Перемикач періодів ─────────────────────────────────────────
+function switchPeriod(days) {
+  currentPeriod = days;
+  [7,30,90].forEach(d => {
+    const b = document.getElementById('btn'+d);
+    if (d===days) { b.style.background='var(--navy)'; b.style.color='white'; }
+    else          { b.style.background=''; b.style.color=''; }
+  });
+  if (rawData) renderTimeline(rawData, days);
+}
+
+// ── Утиліти ───────────────────────────────────────────────────
+function todayStr() {
+  return new Date().toISOString().slice(0,10);
+}
+function daysAgoStr(n) {
+  const d = new Date(); d.setDate(d.getDate()-n);
+  return d.toISOString().slice(0,10);
+}
+function formatDate(iso, days) {
+  const d = new Date(iso);
+  if (days <= 14) return d.toLocaleDateString('uk-UA',{day:'numeric',month:'short'});
+  if (days <= 30) return d.toLocaleDateString('uk-UA',{day:'numeric',month:'short'});
+  return d.toLocaleDateString('uk-UA',{day:'numeric',month:'short'});
+}
+function formatDatetime(str) {
+  if (!str) return '—';
+  // str: "DD.MM.YYYY HH:MM"
+  const parts = str.split(' ');
+  if (parts.length < 2) return str;
+  const [d,m,y] = parts[0].split('.');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const dt    = new Date(+y,+m-1,+d); dt.setHours(0,0,0,0);
+  const diff  = Math.round((today-dt)/(1000*60*60*24));
+  if (diff===0) return 'сьогодні ' + parts[1];
+  if (diff===1) return 'вчора '    + parts[1];
+  return parts[0] + ' ' + parts[1];
+}
+function topOf(rows, keyFn) {
+  const c = {};
+  rows.forEach(r => { const k=keyFn(r); c[k]=(c[k]||0)+1; });
+  return Object.entries(c).sort((a,b)=>b[1]-a[1])[0]?.[0];
+}
+function set(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+// ── Старт ─────────────────────────────────────────────────────
+loadData();
+// Авто-оновлення кожні 5 хвилин
+setInterval(loadData, 5 * 60 * 1000);
+</script>
+</body>
+</html>
