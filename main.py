@@ -1,5 +1,5 @@
 # LC Waikiki HR Bot 🇺🇦 — Webhook-версія для Render з підтримкою Google Sheets
-# v2.1 — таймаут сесій, кнопка HR «Написати кандидату», прогрес-бар, покращений UX
+# v2.2 — таймаут сесій, кнопка HR, прогрес-бар, покращений UX, HR-дашборд
 
 import os
 import re
@@ -11,7 +11,7 @@ from typing import List
 
 import telebot
 from telebot import types
-from flask import Flask, request
+from flask import Flask, request, jsonify, send_from_directory
 
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -647,6 +647,59 @@ def _send_session_expired(chat_id: int):
 @app.route("/", methods=["GET"])
 def index():
     return "✅ LC Waikiki HR Bot працює!", 200
+
+
+@app.route("/dashboard", methods=["GET"])
+def dashboard():
+    """HR-дашборд — статична HTML-сторінка."""
+    dashboard_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)))
+    return send_from_directory(dashboard_dir, "dashboard.html")
+
+
+@app.route("/api/stats", methods=["GET"])
+def api_stats():
+    """
+    Повертає JSON зі всіма рядками Google Sheets для дашборду.
+    Структура рядка: [дата, місто, ТЦ, адреса, корп.тел, посада, ПІБ, тел.кандидата, tg_id]
+    Індекси:          0      1      2    3        4         5       6    7               8
+    """
+    try:
+        rows = _sheet.get_all_values()
+        result = []
+        for row in rows:
+            # пропускаємо заголовок (якщо є) та порожні рядки
+            if not row or not row[0]:
+                continue
+            # перша колонка — дата у форматі "DD.MM.YYYY HH:MM"
+            raw_date = row[0].strip()
+            # перетворюємо на ISO для зручності сортування у JS
+            try:
+                dt = datetime.strptime(raw_date, "%d.%m.%Y %H:%M")
+                iso_date = dt.strftime("%Y-%m-%d")
+            except ValueError:
+                iso_date = ""
+
+            result.append({
+                "datetime": raw_date,
+                "date":     iso_date,
+                "city":     row[1].strip() if len(row) > 1 else "",
+                "store":    row[2].strip() if len(row) > 2 else "",
+                "address":  row[3].strip() if len(row) > 3 else "",
+                "phone":    row[4].strip() if len(row) > 4 else "",
+                "position": row[5].strip() if len(row) > 5 else "",
+                "name":     row[6].strip() if len(row) > 6 else "",
+                "userphone":row[7].strip() if len(row) > 7 else "",
+                "tg_id":    row[8].strip() if len(row) > 8 else "",
+            })
+
+        resp = jsonify({"rows": result, "total": len(result)})
+        # дозволяємо браузеру кешувати на 60 секунд
+        resp.headers["Cache-Control"] = "public, max-age=60"
+        return resp
+
+    except Exception as e:
+        print(f"❌ /api/stats error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route(WEBHOOK_PATH, methods=["POST"])
