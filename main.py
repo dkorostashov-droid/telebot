@@ -702,7 +702,7 @@ def api_stats():
     try:
         rows = _sheet.get_all_values()
         result = []
-        for row in rows:
+        for row in rows[1:]:   # пропускаємо перший рядок-заголовок
             if not row or not row[0]:
                 continue
             raw_date = row[0].strip()
@@ -710,7 +710,11 @@ def api_stats():
                 dt = datetime.strptime(raw_date, "%d.%m.%Y %H:%M")
                 iso_date = dt.strftime("%Y-%m-%d")
             except ValueError:
-                iso_date = ""
+                try:
+                    dt = datetime.strptime(raw_date, "%d.%m.%Y")
+                    iso_date = dt.strftime("%Y-%m-%d")
+                except ValueError:
+                    iso_date = ""
 
             result.append({
                 "datetime":  raw_date,
