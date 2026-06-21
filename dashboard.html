@@ -20,7 +20,7 @@ body{font-family:'Inter',sans-serif;background:var(--grey0);color:var(--text);mi
 /* ── LOGIN ── */
 #loginScreen{position:fixed;inset:0;background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 60%,#1a1a2e 100%);display:flex;align-items:center;justify-content:center;z-index:9999}
 #loginScreen.hidden{display:none}
-.login-box{background:rgba(255,255,255,.06);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:2.5rem 2.5rem 2rem;width:340px;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.4)}
+.login-box{background:rgba(255,255,255,.06);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:2.5rem 2rem 2rem;width:min(340px,90vw);text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.4)}
 .login-logo{width:56px;height:56px;background:var(--red);border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:'Montserrat',sans-serif;font-weight:900;font-size:15px;color:#fff;margin:0 auto 1.2rem}
 .login-title{font-family:'Montserrat',sans-serif;font-weight:800;font-size:1.25rem;color:#fff;margin-bottom:.3rem}
 .login-sub{font-size:.8rem;color:var(--grey2);margin-bottom:1.8rem}
@@ -232,15 +232,210 @@ main{max-width:1280px;margin:0 auto;padding:2rem 1.5rem 3rem}
 .print-header h1{font-family:'Montserrat',sans-serif;font-size:1.4rem;font-weight:800;color:var(--navy)}
 .print-header p{font-size:.85rem;color:var(--grey3);margin-top:4px}
 
+/* ── CANDIDATE CARDS (mobile) ── */
+.cand-cards{display:none;flex-direction:column;gap:10px}
+.cand-card-item{
+  background:#fff;border-radius:12px;box-shadow:var(--shadow);
+  padding:14px 16px;
+}
+.cand-card-top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.cand-card-avatar{
+  width:40px;height:40px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,var(--navy),var(--red));
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:.85rem;color:#fff;
+}
+.cand-card-name{font-weight:700;font-size:.9rem;color:var(--text);line-height:1.3}
+.cand-card-date{font-size:.72rem;color:var(--grey3);margin-top:2px}
+.cand-card-badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.cand-card-loc{
+  font-size:.75rem;color:var(--grey3);margin-bottom:10px;
+  display:flex;align-items:center;gap:4px;
+}
+.cand-card-actions{display:flex;gap:8px}
+.cand-action-btn{
+  flex:1;display:flex;align-items:center;justify-content:center;gap:6px;
+  padding:10px 8px;border-radius:10px;border:none;cursor:pointer;
+  font-family:'Inter',sans-serif;font-size:.82rem;font-weight:600;
+  transition:opacity .15s;text-decoration:none;
+}
+.cand-action-btn:active{opacity:.75}
+.cand-action-btn.call{background:#E3F0FF;color:#1B52A8}
+.cand-action-btn.tg{background:#E8F5E9;color:#2E7D32}
+.cand-card-status{margin-top:10px}
+.cand-card-status select{
+  width:100%;border:1px solid var(--grey1);border-radius:8px;
+  padding:8px 10px;font-size:.82rem;font-family:'Inter',sans-serif;
+  font-weight:600;color:var(--text);background:#fff;outline:none;
+  appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%236B7A99' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;
+}
+.cand-card-status select.new{background-color:#E3F2FD;color:#1565C0;border-color:#BBDEFB}
+.cand-card-status select.review{background-color:#FFF8E1;color:#E65100;border-color:#FFE082}
+.cand-card-status select.invited{background-color:#E8F5E9;color:#2E7D32;border-color:#A5D6A7}
+.cand-card-status select.hired{background-color:#E0F2F1;color:#00695C;border-color:#80CBC4}
+.cand-card-status select.rejected{background-color:#FFEBEE;color:#C62828;border-color:#EF9A9A}
+
+/* ── MOB CANDIDATE CARDS ── */
+.mob-cand-list{display:none;flex-direction:column;gap:10px}
+.mob-cand-card{
+  background:#fff;border-radius:14px;box-shadow:var(--shadow);
+  overflow:hidden;border-left:4px solid var(--navy);
+}
+.mob-cand-card.status-review{border-left-color:#FF8F00}
+.mob-cand-card.status-invited{border-left-color:#2E7D32}
+.mob-cand-card.status-hired{border-left-color:#00695C}
+.mob-cand-card.status-rejected{border-left-color:#C62828}
+.mob-cand-top{display:flex;align-items:center;gap:12px;padding:14px 14px 10px}
+.mob-cand-avatar{
+  width:44px;height:44px;border-radius:50%;
+  background:linear-gradient(135deg,var(--navy),var(--red));
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:.9rem;color:#fff;flex-shrink:0;
+}
+.mob-cand-name{font-weight:700;font-size:.92rem;color:var(--text);line-height:1.3}
+.mob-cand-pos{margin-top:3px}
+.mob-cand-meta{
+  display:flex;gap:6px;padding:0 14px 10px;flex-wrap:wrap;
+}
+.mob-meta-pill{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:.72rem;font-weight:500;color:var(--grey3);
+  background:var(--grey0);border-radius:20px;padding:3px 8px;
+}
+.mob-cand-actions{
+  display:grid;grid-template-columns:1fr 1fr;gap:1px;
+  background:var(--grey1);border-top:1px solid var(--grey1);
+}
+.mob-act-btn{
+  background:#fff;border:none;padding:11px 8px;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  font-family:'Inter',sans-serif;font-size:.78rem;font-weight:600;
+  color:var(--navy);cursor:pointer;text-decoration:none;
+  transition:background .15s;
+}
+.mob-act-btn:hover{background:var(--grey0)}
+.mob-act-btn.red{color:var(--red)}
+.mob-act-btn.tg{color:#0088cc}
+.mob-cand-status{
+  padding:10px 14px;border-top:1px solid var(--grey0);background:var(--grey0);
+}
+.mob-status-select{
+  width:100%;border:1px solid var(--grey1);border-radius:8px;
+  padding:8px 12px;font-size:.82rem;font-weight:600;
+  font-family:'Inter',sans-serif;background:#fff;
+  color:var(--text);outline:none;cursor:pointer;
+  appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%236B7A99' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;
+}
+.mob-status-select.new{background-color:#E3F2FD;color:#1565C0;border-color:#BBDEFB}
+.mob-status-select.review{background-color:#FFF8E1;color:#E65100;border-color:#FFE082}
+.mob-status-select.invited{background-color:#E8F5E9;color:#2E7D32;border-color:#A5D6A7}
+.mob-status-select.hired{background-color:#E0F2F1;color:#00695C;border-color:#80CBC4}
+.mob-status-select.rejected{background-color:#FFEBEE;color:#C62828;border-color:#EF9A9A}
+
+/* ── MOBILE BOTTOM NAV ── */
+.mob-bottom-nav{
+  display:none;position:fixed;bottom:0;left:0;right:0;
+  background:#fff;border-top:1px solid var(--grey1);
+  box-shadow:0 -4px 20px rgba(27,43,94,.1);
+  z-index:200;padding:0;
+}
+.mob-bottom-nav-inner{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  max-width:480px;margin:0 auto;
+}
+.mob-nav-btn{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:10px 4px 12px;border:none;background:none;
+  font-family:'Inter',sans-serif;font-size:.62rem;font-weight:600;
+  color:var(--grey2);cursor:pointer;transition:color .15s;
+}
+.mob-nav-btn svg{width:22px;height:22px}
+.mob-nav-btn.active{color:var(--navy)}
+.mob-nav-btn.active svg path,.mob-nav-btn.active svg polyline,
+.mob-nav-btn.active svg circle,.mob-nav-btn.active svg rect{
+  stroke:var(--navy);
+}
+
 /* ── RESPONSIVE ── */
 @media(max-width:900px){
   .kpi-row{grid-template-columns:repeat(2,1fr)}
   .grid-2,.grid-3,.grid-map{grid-template-columns:1fr}
 }
+
 @media(max-width:600px){
-  main{padding:1rem .75rem 2rem}
-  header{padding:0 1rem}
-  .header-sub,.logout-btn{display:none}
+  /* Header */
+  header{height:auto;padding:0;flex-direction:column;align-items:stretch}
+  .header-top-row{
+    display:flex!important;align-items:center;justify-content:space-between;
+    padding:10px 14px;height:56px;
+  }
+  .header-brand{gap:10px}
+  .header-logo{width:36px;height:36px;font-size:11px}
+  .header-title{font-size:.9rem}
+  .header-sub{display:none}
+  .header-right{display:none}
+  .header-bottom-row{
+    display:flex!important;align-items:center;justify-content:space-between;
+    padding:6px 14px 10px;gap:6px;border-top:1px solid rgba(255,255,255,.08);
+  }
+  .mob-tabs{display:flex;gap:3px;background:rgba(255,255,255,.1);border-radius:8px;padding:3px;flex:1}
+  .mob-tab{
+    flex:1;background:none;border:none;color:rgba(255,255,255,.6);
+    font-family:'Inter',sans-serif;font-size:.75rem;font-weight:600;
+    padding:5px 4px;border-radius:6px;cursor:pointer;text-align:center;
+  }
+  .mob-tab.active{background:#fff;color:var(--navy)}
+  .mob-hdr-btns{display:flex;gap:5px}
+  .mob-icon-btn{
+    width:34px;height:34px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);
+    border-radius:8px;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;color:#fff;flex-shrink:0;
+  }
+  .mob-icon-btn.spinning svg{animation:spin .8s linear infinite}
+
+  /* Layout */
+  main{padding:.75rem .75rem 80px}
+
+  /* KPI — горизонтальний скрол */
+  .kpi-row{
+    display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;
+    scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
+    margin-bottom:1rem;
+  }
+  .kpi-row::-webkit-scrollbar{display:none}
+  .kpi-card{
+    min-width:145px;flex-shrink:0;scroll-snap-align:start;padding:12px 13px;
+  }
+  .kpi-val{font-size:1.55rem}
+  .kpi-delta{font-size:.62rem;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis}
+  .kpi-label{font-size:.68rem}
+  .kpi-icon{width:36px;height:36px;font-size:1.1rem}
+
+  /* Картки кандидатів */
+  .cand-table-wrap,.cand-table{display:none!important}
+  .mob-cand-list{display:flex}
+  .cand-card{box-shadow:none;background:transparent}
+  .pagination{padding:.7rem .5rem;background:#fff;border-radius:12px;margin-top:8px;box-shadow:var(--shadow)}
+
+  /* Тулбар */
+  .cand-toolbar{flex-direction:column;align-items:stretch;gap:8px}
+  .search-box{max-width:100%;min-width:unset}
+  .filter-select{width:100%}
+  .quick-filters{justify-content:stretch}
+  .qf-btn{flex:1;text-align:center}
+  .toolbar-right{margin-left:0}
+  .action-btn{justify-content:center}
+
+  /* Картки статистики */
+  .card-head{padding:.8rem 1rem .7rem}
+  .card-body{padding:.8rem 1rem}
+
+  /* Нижня навігація */
+  .mob-bottom-nav{display:block}
 }
 </style>
 </head>
@@ -264,27 +459,45 @@ main{max-width:1280px;margin:0 auto;padding:2rem 1.5rem 3rem}
 </div>
 
 <header>
-  <div class="header-brand">
-    <div class="header-logo">LCW</div>
-    <div>
-      <div class="header-title">LC Waikiki Ukraine</div>
-      <div class="header-sub">HR — Аналітика кандидатів</div>
+  <!-- Десктоп рядок -->
+  <div class="header-top-row" style="display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:68px;width:100%">
+    <div class="header-brand">
+      <div class="header-logo">LCW</div>
+      <div>
+        <div class="header-title">LC Waikiki Ukraine</div>
+        <div class="header-sub">HR — Аналітика кандидатів</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="showPage('stats',this)">📊 Статистика</button>
+        <button class="tab-btn"        onclick="showPage('candidates',this)">👥 Кандидати</button>
+      </div>
+      <button class="hdr-btn" id="refreshBtn" onclick="loadData()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        Оновити
+      </button>
+      <button class="hdr-btn" onclick="printPDF()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        PDF-звіт
+      </button>
+      <button class="logout-btn" onclick="doLogout()">Вийти</button>
     </div>
   </div>
-  <div class="header-right">
-    <div class="tabs">
-      <button class="tab-btn active" onclick="showPage('stats',this)">📊 Статистика</button>
-      <button class="tab-btn"        onclick="showPage('candidates',this)">👥 Кандидати</button>
+  <!-- Мобільний нижній рядок з табами і кнопками -->
+  <div class="header-bottom-row" style="display:none">
+    <div class="mob-tabs">
+      <button class="mob-tab active" onclick="showPageMob('stats',this)">📊 Статистика</button>
+      <button class="mob-tab"        onclick="showPageMob('candidates',this)">👥 Кандидати</button>
     </div>
-    <button class="hdr-btn" id="refreshBtn" onclick="loadData()">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-      Оновити
-    </button>
-    <button class="hdr-btn" onclick="printPDF()">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-      PDF-звіт
-    </button>
-    <button class="logout-btn" onclick="doLogout()">Вийти</button>
+    <div class="mob-hdr-btns">
+      <button class="mob-icon-btn" id="refreshBtnMob" onclick="loadData()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      </button>
+      <button class="mob-icon-btn" onclick="doLogout()" title="Вийти">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
   </div>
 </header>
 
@@ -495,6 +708,8 @@ main{max-width:1280px;margin:0 auto;padding:2rem 1.5rem 3rem}
           <tbody id="candTableBody"></tbody>
         </table>
       </div>
+      <!-- Мобільні картки кандидатів -->
+      <div class="mob-cand-list" id="mobCandList"></div>
       <div class="pagination">
         <span id="pg-info">—</span>
         <div class="pg-btns" id="pg-btns"></div>
@@ -502,6 +717,28 @@ main{max-width:1280px;margin:0 auto;padding:2rem 1.5rem 3rem}
     </div>
   </div>
 </main>
+
+<!-- НИЖНЯ НАВІГАЦІЯ (тільки мобайл) -->
+<nav class="mob-bottom-nav">
+  <div class="mob-bottom-nav-inner">
+    <button class="mob-nav-btn active" id="mob-nav-stats" onclick="mobNav('stats')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Статистика
+    </button>
+    <button class="mob-nav-btn" id="mob-nav-candidates" onclick="mobNav('candidates')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Кандидати
+    </button>
+    <button class="mob-nav-btn" onclick="loadData()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      Оновити
+    </button>
+    <button class="mob-nav-btn" onclick="doLogout()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Вийти
+    </button>
+  </div>
+</nav>
 
 <script>
 // ══════════════════════════════════════════
@@ -524,6 +761,33 @@ document.getElementById('pwdInput').addEventListener('keydown',e=>{if(e.key==='E
 })();
 
 // ══════════════════════════════════════════
+// MOBILE NAV
+// ══════════════════════════════════════════
+function mobNav(name){
+  // Перемикаємо сторінку
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  // Оновлюємо активну кнопку нижньої навігації
+  document.querySelectorAll('.mob-nav-btn').forEach(b=>b.classList.remove('active'));
+  const navBtn=document.getElementById('mob-nav-'+name);
+  if(navBtn)navBtn.classList.add('active');
+  // Синхронізуємо верхні таби
+  document.querySelectorAll('.mob-tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+}
+
+function showPageMob(name,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.querySelectorAll('.mob-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  // Синхронізуємо нижню навігацію
+  document.querySelectorAll('.mob-nav-btn').forEach(b=>b.classList.remove('active'));
+  const navBtn=document.getElementById('mob-nav-'+name);
+  if(navBtn)navBtn.classList.add('active');
+}
+
+// ══════════════════════════════════════════
 // TABS
 // ══════════════════════════════════════════
 function showPage(name,btn){
@@ -531,6 +795,10 @@ function showPage(name,btn){
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
   btn.classList.add('active');
+  // Синхронізуємо нижню навігацію
+  document.querySelectorAll('.mob-nav-btn').forEach(b=>b.classList.remove('active'));
+  const navBtn=document.getElementById('mob-nav-'+name);
+  if(navBtn)navBtn.classList.add('active');
 }
 
 // ══════════════════════════════════════════
@@ -936,6 +1204,7 @@ function renderCandidates(){
     return`<span class="pos-badge ${cl}">${p}</span>`;
   };
 
+  // ── Десктоп таблиця ──
   document.getElementById('candTableBody').innerHTML=slice.map(r=>{
     const parts=(r.name||'').trim().split(' ');
     const initials=(parts[0]?.[0]||'')+(parts[1]?.[0]||'');
@@ -960,6 +1229,60 @@ function renderCandidates(){
     </tr>`;
   }).join('');
 
+  // ── Мобільні картки ──
+  const mobList=document.getElementById('mobCandList');
+  if(mobList){
+    mobList.innerHTML=slice.map(r=>{
+      const parts=(r.name||'').trim().split(' ');
+      const initials=(parts[0]?.[0]||'')+(parts[1]?.[0]||'');
+      const uid=r.tg_id||r.name||'x'+Math.random();
+      const curStatus=getStatus(uid);
+      const statusOpts=STATUS_OPTS.map(s=>`<option value="${s.val}"${s.val===curStatus?' selected':''}>${s.label}</option>`).join('');
+      const statusCls=STATUS_OPTS.find(s=>s.val===curStatus)?.cls||'new';
+      const posCl=r.position?.includes('Продавець')?'seller':r.position?.includes('Касир')?'cashier':'storage';
+
+      const phoneBtn=r.userphone
+        ?`<a class="mob-act-btn red" href="tel:${r.userphone}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.93 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.88 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 5.93 5.93l1.07-1.07a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            Дзвонити
+          </a>`
+        :`<span class="mob-act-btn" style="opacity:.35;cursor:default">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.93 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.88 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 5.93 5.93l1.07-1.07a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            Немає тел.
+          </span>`;
+
+      const tgBtn=r.tg_id
+        ?`<a class="mob-act-btn tg" href="tg://user?id=${r.tg_id}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            Telegram
+          </a>`
+        :`<span class="mob-act-btn" style="opacity:.35;cursor:default">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            Немає TG
+          </span>`;
+
+      return`<div class="mob-cand-card status-${curStatus}">
+        <div class="mob-cand-top">
+          <div class="mob-cand-avatar">${initials.toUpperCase()}</div>
+          <div style="flex:1;min-width:0">
+            <div class="mob-cand-name">${r.name||'—'}</div>
+            <div class="mob-cand-pos"><span class="pos-badge ${posCl}">${r.position||'—'}</span></div>
+          </div>
+          <div class="date-cell" style="font-size:.7rem;text-align:right;flex-shrink:0">${formatDatetime(r.datetime)}</div>
+        </div>
+        <div class="mob-cand-meta">
+          <span class="mob-meta-pill">🏙️ ${r.city||'—'}</span>
+          <span class="mob-meta-pill">🏬 ${r.store||'—'}</span>
+          ${r.userphone?`<span class="mob-meta-pill">📞 ${r.userphone}</span>`:''}
+        </div>
+        <div class="mob-cand-actions">${phoneBtn}${tgBtn}</div>
+        <div class="mob-cand-status">
+          <select class="mob-status-select ${statusCls}" onchange="onMobStatusChange(this,'${uid}',this.closest('.mob-cand-card'))">${statusOpts}</select>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
   // Пагінація
   const btns=document.getElementById('pg-btns');
   let html=`<button class="pg-btn" onclick="goPage(${candPage-1})" ${candPage<=1?'disabled':''}>‹</button>`;
@@ -979,6 +1302,15 @@ function onStatusChange(sel,uid){
   setStatus(uid,val);
   const cls=STATUS_OPTS.find(s=>s.val===val)?.cls||'new';
   sel.className='status-select '+cls;
+}
+
+function onMobStatusChange(sel,uid,card){
+  const val=sel.value;
+  setStatus(uid,val);
+  const cls=STATUS_OPTS.find(s=>s.val===val)?.cls||'new';
+  sel.className='mob-status-select '+cls;
+  // Оновлюємо колір лівої смуги картки
+  card.className='mob-cand-card status-'+val;
 }
 
 function goPage(p){candPage=p;renderCandidates()}
