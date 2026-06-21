@@ -1,12 +1,12 @@
 # LC Waikiki HR Bot 🇺🇦 — Webhook-версія для Render з підтримкою Google Sheets
-# v2.2 — таймаут сесій, кнопка HR, прогрес-бар, покращений UX, HR-дашборд
+# v2.3 — виправлено часовий пояс UTC+3 (Україна)
 
 import os
 import re
 import json
 import time
 import threading
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import List
 
 import telebot
@@ -15,6 +15,9 @@ from flask import Flask, request, jsonify, send_from_directory
 
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+
+# ── Часовий пояс України (UTC+3) ──────────────────────────────
+UA_TZ = timezone(timedelta(hours=3))
 
 # ─────────────────────────── CONFIG ───────────────────────────
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -44,12 +47,8 @@ if not WEBHOOK_URL:
     )
 
 # ── Пароль дашборду ────────────────────────────────────────────
-# Задайте змінну DASHBOARD_PASSWORD у Environment Variables на Render.
-# Якщо не задано — використовується пароль за замовчуванням (змініть!).
 DASHBOARD_PASSWORD = os.getenv("DASHBOARD_PASSWORD", "lcwaikiki2024")
 
-# Простий in-memory токен (достатньо для одного пароля без БД).
-# При рестарті сервера токени скидаються — користувачі просто введуть пароль знову.
 import secrets as _secrets
 _valid_tokens: set = set()
 
@@ -210,6 +209,11 @@ def get_first_name(full_name: str) -> str:
     """Повертає ім'я (друге слово) з ПІБ. Якщо слів менше двох — повертає перше."""
     parts = full_name.strip().split()
     return parts[1] if len(parts) >= 2 else parts[0]
+
+
+def now_ua() -> str:
+    """Повертає поточний час у часовому поясі України (UTC+3)."""
+    return datetime.now(UA_TZ).strftime("%d.%m.%Y %H:%M")
 
 
 def touch_session(chat_id: int):
@@ -485,8 +489,6 @@ def on_phone(message: types.Message):
     user_data.setdefault(chat_id, {}).update({"user_phone": phone, "step": STEP_CONFIRM})
 
     data = user_data[chat_id]
-
-    # ── Покращений екран підтвердження (пункт 7) ──
     summary = (
         "📋 <b>Перевірте ваші дані перед відправкою:</b>\n"
         "━━━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -554,7 +556,8 @@ def on_gdpr_accept(message: types.Message):
         bot.send_message(chat_id, "⚠️ Сталася помилка. Спробуйте ще раз /start")
         return
 
-    today = datetime.now().strftime("%d.%m.%Y %H:%M")
+    # ✅ Час у часовому поясі України
+    today = now_ua()
 
     # ── Запис у Google Sheets ──
     gs_ok = False
@@ -576,9 +579,9 @@ def on_gdpr_accept(message: types.Message):
     except Exception as e:
         print(f"❌ Google Sheets error: {e}")
 
-    # ── Повідомлення HR з кнопкою «Написати кандидату» (пункт 5) ──
-    tg_id   = message.from_user.id
-    tg_user = message.from_user.username
+    # ── Повідомлення HR з кнопкою «Написати кандидату» ──
+    tg_id      = message.from_user.id
+    tg_user    = message.from_user.username
     corp_phone = data.get("Телефон", "")
 
     hr_text = (
@@ -597,7 +600,6 @@ def on_gdpr_accept(message: types.Message):
         "━━━━━━━━━━━━━━━━━━━━━━"
     )
 
-    # Inline-кнопка для HR — відкриває чат з кандидатом
     hr_kb = types.InlineKeyboardMarkup()
     if tg_user:
         hr_kb.add(types.InlineKeyboardButton(
@@ -615,7 +617,7 @@ def on_gdpr_accept(message: types.Message):
     except Exception as e:
         print(f"❌ HR chat error: {e}")
 
-    # ── Відповідь кандидату (пункт 7) ──
+    # ── Відповідь кандидату ──
     first_name = get_first_name(data.get("ПІБ", ""))
     phone_line = (
         f"📞 Якщо є питання — телефонуйте у наш магазин:\n"
@@ -669,14 +671,12 @@ def index():
 
 @app.route("/dashboard", methods=["GET"])
 def dashboard():
-    """HR-дашборд — статична HTML-сторінка."""
     dashboard_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)))
     return send_from_directory(dashboard_dir, "dashboard.html")
 
 
 @app.route("/api/auth", methods=["POST"])
 def api_auth():
-    """Перевіряє пароль і повертає сесійний токен."""
     try:
         body = request.get_json(force=True) or {}
         pwd  = body.get("password", "")
@@ -689,12 +689,6 @@ def api_auth():
 
 @app.route("/api/stats", methods=["GET"])
 def api_stats():
-    """
-    Повертає JSON зі всіма рядками Google Sheets для дашборду.
-    Захищений токеном — токен передається в заголовку X-Auth-Token.
-    Структура рядка: [дата, місто, ТЦ, адреса, корп.тел, посада, ПІБ, тел.кандидата, tg_id]
-    Індекси:          0      1      2    3        4         5       6    7               8
-    """
     token = request.headers.get("X-Auth-Token", "")
     if not _check_token(token):
         return jsonify({"error": "Unauthorized"}), 401
@@ -702,7 +696,7 @@ def api_stats():
     try:
         rows = _sheet.get_all_values()
         result = []
-        for row in rows[1:]:   # пропускаємо перший рядок-заголовок
+        for row in rows[1:]:
             if not row or not row[0]:
                 continue
             raw_date = row[0].strip()
