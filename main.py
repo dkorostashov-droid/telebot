@@ -403,11 +403,9 @@ def go_back(chat_id: int, step: str):
     elif step == STEP_PHONE:
         data["step"] = STEP_NAME
         render(chat_id, screen_name_text(), kb_back_only())
-        bot.register_next_step_handler_by_chat_id(chat_id, on_name)
     elif step == STEP_CONFIRM:
         data["step"] = STEP_PHONE
         render(chat_id, screen_phone_text(), kb_back_only())
-        bot.register_next_step_handler_by_chat_id(chat_id, on_phone)
     else:
         restart_flow(chat_id)
 
@@ -418,7 +416,6 @@ def on_start(message: types.Message):
     print(f"🚀 /start від chat_id={message.chat.id}, user={message.from_user.username!r}")
     chat_id = message.chat.id
     # Очищаємо pending next_step_handler щоб /start завжди спрацьовував
-    bot.clear_step_handler_by_chat_id(chat_id)
     old = user_data.get(chat_id)
     if old:
         _strip_keyboard(chat_id, old.get("anchor_msg_id"))
@@ -485,7 +482,6 @@ def on_callback(call: types.CallbackQuery):
         data.update({"Посада": clean_position, "step": STEP_NAME})
         bot.answer_callback_query(call.id)
         render(chat_id, screen_name_text(), kb_back_only())
-        bot.register_next_step_handler_by_chat_id(chat_id, on_name)
         return
 
     if cd.startswith("confirm:"):
@@ -516,12 +512,10 @@ def on_name(message: types.Message):
     name = (message.text or "").strip()
     if len(name.split()) < 2:
         render(chat_id, screen_name_text(retry=True), kb_back_only())
-        bot.register_next_step_handler_by_chat_id(chat_id, on_name)
         return
 
     data.update({"ПІБ": name, "step": STEP_PHONE})
     render(chat_id, screen_phone_text(), kb_back_only())
-    bot.register_next_step_handler_by_chat_id(chat_id, on_phone)
 
 
 def on_phone(message: types.Message):
@@ -536,7 +530,6 @@ def on_phone(message: types.Message):
     phone = (message.text or "").strip()
     if not is_valid_phone(phone):
         render(chat_id, screen_phone_text(retry=True), kb_back_only())
-        bot.register_next_step_handler_by_chat_id(chat_id, on_phone)
         return
 
     data.update({"user_phone": phone, "step": STEP_CONFIRM})
@@ -651,17 +644,18 @@ def on_stray_text(message: types.Message):
     chat_id = message.chat.id
     print(f"🔥 on_stray_text called: text={message.text!r}, chat_id={chat_id}")
     try:
-        if message.text and message.text.startswith("/"):
-            print(f"🔥 skipping command")
-            return
         data = user_data.get(chat_id)
         step = data.get("step") if data else None
-        print(f"🔥 step={step}, data_keys={list(data.keys()) if data else None}")
-        if step in (STEP_NAME, STEP_PHONE):
-            return
+        print(f"🔥 step={step}")
         if not data or is_session_expired(chat_id):
-            print(f"🔥 sending: no session")
+            print(f"🔥 no session → send /start hint")
             bot.send_message(chat_id, "Натисніть /start, щоб почати заповнення заявки 🙂")
+            return
+        if step == STEP_NAME:
+            on_name(message)
+            return
+        if step == STEP_PHONE:
+            on_phone(message)
             return
         print(f"🔥 sending: use buttons")
         bot.send_message(chat_id, "Будь ласка, скористайтесь кнопками вище 👆 (або /start, щоб почати заново).")
@@ -745,10 +739,6 @@ def webhook():
         update = telebot.types.Update.de_json(raw)
         print(f"📨 UPDATE: update_id={update.update_id}, msg={getattr(update.message, 'text', None)!r}, chat={getattr(getattr(update.message, 'chat', None), 'id', None)}")
         # Якщо /start або /cancel — скидаємо pending next_step_handler
-        if update.message and getattr(update.message, 'text', '') in ('/start', '/cancel'):
-            cid = update.message.chat.id
-            bot.clear_step_handler_by_chat_id(cid)
-            print(f"🧹 cleared next_step_handler for chat_id={cid}")
         handlers = bot.message_handlers
         print(f"🔍 handlers count={len(handlers)}")
         for i, h in enumerate(handlers):
