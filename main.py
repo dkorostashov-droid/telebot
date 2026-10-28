@@ -413,7 +413,7 @@ def go_back(chat_id: int, step: str):
 
 
 # ─────────────────────────── /start та /cancel ─────────────────
-@bot.message_handler(commands=["start", "cancel"])
+@bot.message_handler(func=lambda m: m.text and m.text.strip() in ("/start", "/cancel"))
 def on_start(message: types.Message):
     print(f"🚀 /start від chat_id={message.chat.id}, user={message.from_user.username!r}")
     chat_id = message.chat.id
@@ -744,7 +744,9 @@ def webhook():
             bot.clear_step_handler_by_chat_id(cid)
             print(f"🧹 cleared next_step_handler for chat_id={cid}")
         handlers = bot.message_handlers
-        print(f"🔍 handlers count={len(handlers)}, types={[(h.get('commands'), h.get('func') is not None) for h in handlers]}")
+        print(f"🔍 handlers count={len(handlers)}")
+        for i, h in enumerate(handlers):
+            print(f"🔍 handler[{i}]: filters={h.get('filters')}, commands={h.get('filters',{}).get('commands')}, content_types={h.get('filters',{}).get('content_types')}")
         bot.process_new_updates([update])
         print("✅ process_new_updates done")
         return "OK", 200
