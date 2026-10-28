@@ -1,5 +1,5 @@
 # LC Waikiki HR Bot 🇺🇦 — Webhook-версія для Render з підтримкою Google Sheets
-# v3.0 — inline-кнопки, єдиний "екран", об'єднаний Confirm+GDPR, фікси стейт-машини
+# v3.1 — фікс content-type перевірки у webhook
 
 import os
 import re
@@ -713,13 +713,22 @@ def api_stats():
         return jsonify({"error": str(e)}), 500
 
 
+# ── WEBHOOK: приймаємо будь-який application/json (з charset або без) ──
 @app.route(WEBHOOK_PATH, methods=["POST"])
 def webhook():
-    if request.headers.get("content-type") == "application/json":
+    ct = request.content_type or ""
+    if "application/json" in ct:
         update = telebot.types.Update.de_json(request.get_data().decode("utf-8"))
         bot.process_new_updates([update])
         return "OK", 200
-    return "Unsupported Media Type", 415
+    # Fallback: спробуємо навіть без правильного content-type
+    try:
+        update = telebot.types.Update.de_json(request.get_data().decode("utf-8"))
+        bot.process_new_updates([update])
+        return "OK", 200
+    except Exception as e:
+        print(f"❌ webhook parse error: {e}")
+        return "Bad Request", 400
 
 
 # ─────────────────────── WEBHOOK SETUP ────────────────────────
