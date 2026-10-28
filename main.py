@@ -413,7 +413,7 @@ def go_back(chat_id: int, step: str):
 
 
 # ─────────────────────────── /start та /cancel ─────────────────
-@bot.message_handler(func=lambda m: m.text and m.text.strip() in ("/start", "/cancel"))
+@bot.message_handler(commands=["start", "cancel"], content_types=["text"])
 def on_start(message: types.Message):
     print(f"🚀 /start від chat_id={message.chat.id}, user={message.from_user.username!r}")
     chat_id = message.chat.id
