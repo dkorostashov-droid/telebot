@@ -645,7 +645,7 @@ def finalize_application(chat_id: int, from_user):
 
 
 # ─────────────────────────── FALLBACK ──────────────────────────
-@bot.message_handler(content_types=["text"])
+@bot.message_handler(func=lambda m: not (m.text and m.text.startswith("/")), content_types=["text"])
 def on_stray_text(message: types.Message):
     chat_id = message.chat.id
     if message.text and message.text.startswith("/"):
