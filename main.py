@@ -403,6 +403,7 @@ def go_back(chat_id: int, step: str):
 # ─────────────────────────── /start та /cancel ─────────────────
 @bot.message_handler(commands=["start", "cancel"])
 def on_start(message: types.Message):
+    print(f"🚀 /start від chat_id={message.chat.id}, user={message.from_user.username!r}")
     chat_id = message.chat.id
     old = user_data.get(chat_id)
     if old:
@@ -716,18 +717,18 @@ def api_stats():
 # ── WEBHOOK: приймаємо будь-який application/json (з charset або без) ──
 @app.route(WEBHOOK_PATH, methods=["POST"])
 def webhook():
+    import traceback
+    raw = request.get_data().decode("utf-8")
     ct = request.content_type or ""
-    if "application/json" in ct:
-        update = telebot.types.Update.de_json(request.get_data().decode("utf-8"))
-        bot.process_new_updates([update])
-        return "OK", 200
-    # Fallback: спробуємо навіть без правильного content-type
+    print(f"📨 WEBHOOK: ct={ct!r}, body={raw[:300]!r}")
     try:
-        update = telebot.types.Update.de_json(request.get_data().decode("utf-8"))
+        update = telebot.types.Update.de_json(raw)
+        print(f"📨 UPDATE: update_id={update.update_id}, msg={getattr(update.message, 'text', None)!r}, chat={getattr(getattr(update.message, 'chat', None), 'id', None)}")
         bot.process_new_updates([update])
+        print("✅ process_new_updates done")
         return "OK", 200
     except Exception as e:
-        print(f"❌ webhook parse error: {e}")
+        print(f"❌ webhook error: {e}\n{traceback.format_exc()}")
         return "Bad Request", 400
 
 
