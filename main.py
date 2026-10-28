@@ -237,7 +237,13 @@ def _session_cleaner():
 
 
 # ─────────────────────────── BOT & FLASK ──────────────────────
-bot = telebot.TeleBot(BOT_TOKEN, parse_mode="HTML")
+class BotExceptionHandler(telebot.ExceptionHandler):
+    def handle(self, exception):
+        import traceback
+        print(f"\u274C BOT HANDLER EXCEPTION: {exception}\n{traceback.format_exc()}")
+        return True
+
+bot = telebot.TeleBot(BOT_TOKEN, parse_mode="HTML", exception_handler=BotExceptionHandler())
 app = Flask(__name__)
 
 user_data = {}
