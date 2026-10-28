@@ -164,7 +164,6 @@ STEP_NAME = "name"
 STEP_PHONE = "phone"
 STEP_CONFIRM = "confirm"
 
-# ── Прогрес (простий текст, без блочних символів — стабільно рендериться) ──
 STEP_PROGRESS = {
     STEP_CITY: (1, 5),
     STEP_MALL: (2, 5),
@@ -187,13 +186,11 @@ def is_valid_phone(phone: str) -> bool:
 
 
 def get_first_name(full_name: str) -> str:
-    """Повертає ім'я (друге слово) з ПІБ. Якщо слів менше двох — повертає перше."""
     parts = full_name.strip().split()
     return parts[1] if len(parts) >= 2 else (parts[0] if parts else "")
 
 
 def now_ua() -> str:
-    """Повертає поточний час у часовому поясі України (UTC+3)."""
     return datetime.now(UA_TZ).strftime("%d.%m.%Y %H:%M")
 
 
@@ -221,7 +218,6 @@ def _strip_keyboard(chat_id: int, msg_id):
 
 # ─────────────── ФОНОВА ОЧИСТКА СЕСІЙ ─────────────────────────
 def _session_cleaner():
-    """Фоновий потік: кожні 5 хвилин видаляє прострочені сесії."""
     while True:
         time.sleep(5 * 60)
         expired = [cid for cid in list(user_data) if is_session_expired(cid)]
@@ -244,15 +240,14 @@ def _session_cleaner():
 bot = telebot.TeleBot(BOT_TOKEN, parse_mode="HTML")
 app = Flask(__name__)
 
-user_data = {}  # chat_id -> dict зі станом та даними
+user_data = {}
 
 _cleaner_thread = threading.Thread(target=_session_cleaner, daemon=True)
 _cleaner_thread.start()
 
 
-# ─────────────── ЄДИНИЙ "ЕКРАН" (редагування одного повідомлення) ─────────
+# ─────────────── ЄДИНИЙ "ЕКРАН" ───────────────────────────────
 def render(chat_id: int, text: str, kb: types.InlineKeyboardMarkup = None):
-    """Редагує анкорне повідомлення чату, або надсилає нове, якщо анкора ще нема."""
     data = user_data.setdefault(chat_id, {})
     msg_id = data.get("anchor_msg_id")
     if msg_id:
@@ -263,7 +258,7 @@ def render(chat_id: int, text: str, kb: types.InlineKeyboardMarkup = None):
             )
             return
         except Exception:
-            pass  # повідомлення видалено/недоступне — надішлемо нове
+            pass
     sent = bot.send_message(chat_id, text, reply_markup=kb, parse_mode="HTML", disable_web_page_preview=True)
     data["anchor_msg_id"] = sent.message_id
 
@@ -371,7 +366,6 @@ def screen_confirm_text(data: dict) -> str:
 
 # ─────────────────────────── ПЕРЕХОДИ МІЖ КРОКАМИ ───────────────
 def restart_flow(chat_id: int):
-    """Скидає дані і повертає на крок вибору міста, редагуючи той самий анкор."""
     anchor = user_data.get(chat_id, {}).get("anchor_msg_id")
     user_data[chat_id] = {"step": STEP_CITY, "_last_active": time.time()}
     if anchor:
@@ -494,14 +488,14 @@ def on_callback(call: types.CallbackQuery):
     bot.answer_callback_query(call.id)
 
 
-# ─────────────────────────── ТЕКСТОВІ КРОКИ (ПІБ / телефон) ────
+# ─────────────────────────── ТЕКСТОВІ КРОКИ ────────────────────
 def on_name(message: types.Message):
     chat_id = message.chat.id
     data = user_data.get(chat_id)
     if not data or is_session_expired(chat_id):
         return _send_session_expired(chat_id)
     if data.get("step") != STEP_NAME:
-        return  # неактуальне повідомлення — пропускаємо
+        return
 
     touch_session(chat_id)
     name = (message.text or "").strip()
@@ -521,7 +515,7 @@ def on_phone(message: types.Message):
     if not data or is_session_expired(chat_id):
         return _send_session_expired(chat_id)
     if data.get("step") != STEP_PHONE:
-        return  # неактуальне повідомлення — пропускаємо
+        return
 
     touch_session(chat_id)
     phone = (message.text or "").strip()
@@ -541,7 +535,6 @@ def finalize_application(chat_id: int, from_user):
         bot.send_message(chat_id, "⚠️ Сталася помилка. Спробуйте ще раз /start")
         return
 
-    # ── Захист від неповних заявок: перевіряємо усі обов'язкові поля ──
     required = ["Місто", "ТЦ", "Посада", "ПІБ", "user_phone"]
     missing = [f for f in required if not data.get(f)]
     if missing:
@@ -558,7 +551,6 @@ def finalize_application(chat_id: int, from_user):
 
     today = now_ua()
 
-    # ── Запис у Google Sheets ──
     gs_ok = False
     try:
         row = [
@@ -578,7 +570,6 @@ def finalize_application(chat_id: int, from_user):
     except Exception as e:
         print(f"❌ Google Sheets error: {e}")
 
-    # ── Повідомлення HR з кнопкою «Написати кандидату» ──
     tg_id = from_user.id
     tg_user = from_user.username
     corp_phone = data.get("Телефон", "")
@@ -616,10 +607,8 @@ def finalize_application(chat_id: int, from_user):
     except Exception as e:
         print(f"❌ HR chat error: {e}")
 
-    # ── Прибираємо кнопки з анкорного повідомлення ──
     _strip_keyboard(chat_id, data.get("anchor_msg_id"))
 
-    # ── Відповідь кандидату ──
     first_name = get_first_name(data.get("ПІБ", ""))
     phone_line = (
         f"📞 Якщо є питання — телефонуйте у наш магазин:\n <b>{corp_phone}</b>"
@@ -640,12 +629,9 @@ def finalize_application(chat_id: int, from_user):
     user_data.pop(chat_id, None)
 
 
-# ─────────────────────────── FALLBACK: сторонній текст ──────────
+# ─────────────────────────── FALLBACK ──────────────────────────
 @bot.message_handler(content_types=["text"])
 def on_stray_text(message: types.Message):
-    """Ловить будь-який текст поза сценарієм (щоб бот не 'мовчав', якщо юзер
-    написав щось не по кнопках). Не чіпає повідомлення, які очікуються на
-    кроках ПІБ/телефон — ті обробляються власними next-step-хендлерами."""
     chat_id = message.chat.id
     if message.text and message.text.startswith("/"):
         return
@@ -653,7 +639,7 @@ def on_stray_text(message: types.Message):
     data = user_data.get(chat_id)
     step = data.get("step") if data else None
     if step in (STEP_NAME, STEP_PHONE):
-        return  # це очікуваний ввід — обробляється on_name/on_phone
+        return
 
     if not data or is_session_expired(chat_id):
         bot.send_message(chat_id, "Натисніть /start, щоб почати заповнення заявки 🙂")
@@ -743,8 +729,10 @@ def set_webhook():
     print(f"✅ Webhook встановлено: {WEBHOOK_URL}")
 
 
+# ── Викликається при імпорті модуля (працює і з Gunicorn, і напряму) ──
+set_webhook()
+
 # ─────────────────────────── MAIN ─────────────────────────────
 if __name__ == "__main__":
-    set_webhook()
     port = int(os.getenv("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
