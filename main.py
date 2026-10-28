@@ -417,6 +417,8 @@ def go_back(chat_id: int, step: str):
 def on_start(message: types.Message):
     print(f"🚀 /start від chat_id={message.chat.id}, user={message.from_user.username!r}")
     chat_id = message.chat.id
+    # Очищаємо pending next_step_handler щоб /start завжди спрацьовував
+    bot.clear_step_handler_by_chat_id(chat_id)
     old = user_data.get(chat_id)
     if old:
         _strip_keyboard(chat_id, old.get("anchor_msg_id"))
@@ -736,7 +738,11 @@ def webhook():
     try:
         update = telebot.types.Update.de_json(raw)
         print(f"📨 UPDATE: update_id={update.update_id}, msg={getattr(update.message, 'text', None)!r}, chat={getattr(getattr(update.message, 'chat', None), 'id', None)}")
-        print(f"🔍 bot handlers count: {len(bot.message_handlers)}, {len(bot.callback_query_handlers)}")
+        # Якщо /start або /cancel — скидаємо pending next_step_handler
+        if update.message and getattr(update.message, 'text', '') in ('/start', '/cancel'):
+            cid = update.message.chat.id
+            bot.clear_step_handler_by_chat_id(cid)
+            print(f"🧹 cleared next_step_handler for chat_id={cid}")
         bot.process_new_updates([update])
         print("✅ process_new_updates done")
         return "OK", 200
