@@ -736,6 +736,7 @@ def webhook():
     try:
         update = telebot.types.Update.de_json(raw)
         print(f"📨 UPDATE: update_id={update.update_id}, msg={getattr(update.message, 'text', None)!r}, chat={getattr(getattr(update.message, 'chat', None), 'id', None)}")
+        print(f"🔍 bot handlers count: {len(bot.message_handlers)}, {len(bot.callback_query_handlers)}")
         bot.process_new_updates([update])
         print("✅ process_new_updates done")
         return "OK", 200
