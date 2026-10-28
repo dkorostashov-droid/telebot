@@ -647,22 +647,26 @@ def finalize_application(chat_id: int, from_user):
 # ─────────────────────────── FALLBACK ──────────────────────────
 @bot.message_handler(func=lambda m: not (m.text and m.text.startswith("/")), content_types=["text"])
 def on_stray_text(message: types.Message):
+    import traceback
     chat_id = message.chat.id
-    print(f"🔥 on_stray_text called: text={message.text!r}")
-    if message.text and message.text.startswith("/"):
-        print(f"🔥 on_stray_text: ignoring command, returning")
-        return
-
-    data = user_data.get(chat_id)
-    step = data.get("step") if data else None
-    if step in (STEP_NAME, STEP_PHONE):
-        return
-
-    if not data or is_session_expired(chat_id):
-        bot.send_message(chat_id, "Натисніть /start, щоб почати заповнення заявки 🙂")
-        return
-
-    bot.send_message(chat_id, "Будь ласка, скористайтесь кнопками вище 👆 (або /start, щоб почати заново).")
+    print(f"🔥 on_stray_text called: text={message.text!r}, chat_id={chat_id}")
+    try:
+        if message.text and message.text.startswith("/"):
+            print(f"🔥 skipping command")
+            return
+        data = user_data.get(chat_id)
+        step = data.get("step") if data else None
+        print(f"🔥 step={step}, data_keys={list(data.keys()) if data else None}")
+        if step in (STEP_NAME, STEP_PHONE):
+            return
+        if not data or is_session_expired(chat_id):
+            print(f"🔥 sending: no session")
+            bot.send_message(chat_id, "Натисніть /start, щоб почати заповнення заявки 🙂")
+            return
+        print(f"🔥 sending: use buttons")
+        bot.send_message(chat_id, "Будь ласка, скористайтесь кнопками вище 👆 (або /start, щоб почати заново).")
+    except Exception as e:
+        print(f"❌ on_stray_text EXCEPTION: {e}\n{traceback.format_exc()}")
 
 
 # ─────────────────────── FLASK ROUTES ─────────────────────────
