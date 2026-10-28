@@ -248,20 +248,26 @@ _cleaner_thread.start()
 
 # ─────────────── ЄДИНИЙ "ЕКРАН" ───────────────────────────────
 def render(chat_id: int, text: str, kb: types.InlineKeyboardMarkup = None):
+    import traceback
     data = user_data.setdefault(chat_id, {})
     msg_id = data.get("anchor_msg_id")
+    print(f"🎨 render() chat_id={chat_id}, msg_id={msg_id}, text={text[:50]!r}")
     if msg_id:
         try:
             bot.edit_message_text(
                 text, chat_id, msg_id, reply_markup=kb,
                 parse_mode="HTML", disable_web_page_preview=True,
             )
+            print(f"✅ edit_message_text OK")
             return
-        except Exception:
-            pass
-    sent = bot.send_message(chat_id, text, reply_markup=kb, parse_mode="HTML", disable_web_page_preview=True)
-    data["anchor_msg_id"] = sent.message_id
-
+        except Exception as e:
+            print(f"⚠️ edit_message_text failed: {e}")
+    try:
+        sent = bot.send_message(chat_id, text, reply_markup=kb, parse_mode="HTML", disable_web_page_preview=True)
+        data["anchor_msg_id"] = sent.message_id
+        print(f"✅ send_message OK, msg_id={sent.message_id}")
+    except Exception as e:
+        print(f"❌ send_message FAILED: {e}\n{traceback.format_exc()}")
 
 def _send_session_expired(chat_id: int):
     data = user_data.get(chat_id, {})
