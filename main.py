@@ -743,6 +743,8 @@ def webhook():
             cid = update.message.chat.id
             bot.clear_step_handler_by_chat_id(cid)
             print(f"🧹 cleared next_step_handler for chat_id={cid}")
+        handlers = bot.message_handlers
+        print(f"🔍 handlers count={len(handlers)}, types={[(h.get('commands'), h.get('func') is not None) for h in handlers]}")
         bot.process_new_updates([update])
         print("✅ process_new_updates done")
         return "OK", 200
