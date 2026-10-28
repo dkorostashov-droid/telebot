@@ -648,7 +648,9 @@ def finalize_application(chat_id: int, from_user):
 @bot.message_handler(func=lambda m: not (m.text and m.text.startswith("/")), content_types=["text"])
 def on_stray_text(message: types.Message):
     chat_id = message.chat.id
+    print(f"🔥 on_stray_text called: text={message.text!r}")
     if message.text and message.text.startswith("/"):
+        print(f"🔥 on_stray_text: ignoring command, returning")
         return
 
     data = user_data.get(chat_id)
